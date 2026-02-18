@@ -1,30 +1,47 @@
 {
   "expo": {
-    "name": "CivicPulseApp",
-    "slug": "CivicPulseApp",
+    "name": "CivicPulse",
+    "slug": "civicpulse",
     "version": "1.0.0",
-    "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
-    },
+},
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.civicpulse.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "CivicPulse needs your location to show nearby issues and accurately pin new reports.",
+        "NSCameraUsageDescription": "CivicPulse needs camera access to attach photos to issue reports.",
+        "NSPhotoLibraryUsageDescription": "CivicPulse needs photo library access to attach images to issue reports.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CivicPulse needs your location to show nearby issues and pin new reports."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CivicPulse needs photo access to attach images to issue reports.",
+          "cameraPermission": "CivicPulse needs camera access to photograph issues."
+        }
+      ],
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ebcd99a3-fde7-4322-a9ae-dc5e8c39c8c8"
+      }
     }
   }
 }

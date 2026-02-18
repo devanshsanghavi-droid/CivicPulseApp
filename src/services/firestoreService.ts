@@ -1,0 +1,297 @@
+// src/services/firestoreService.ts
+// Nearly identical to your web version!
+// The Firebase Firestore SDK works the same in React Native.
+
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  setDoc,
+  deleteDoc,
+  increment,
+  Timestamp
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebaseConfig';
+import {
+  Issue,
+  Comment,
+  IssueStatus,
+  LoginRecord,
+  UserRecord,
+  Notification,
+  Report
+} from '../types';
+import { calculateTrendingScore } from './storage';
+
+export const firestoreService = {
+
+  // --- Issues ---
+
+  getIssues: async (sort: string = 'trending', categoryId?: string): Promise<Issue[]> => {
+    try {
+      let q = query(
+        collection(db, 'issues'),
+        where('hidden', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      let issues: Issue[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Issue));
+
+      if (categoryId) {
+        issues = issues.filter(i => i.categoryId === categoryId);
+      }
+
+      switch (sort) {
+        case 'trending':
+          return issues.sort((a, b) => calculateTrendingScore(b) - calculateTrendingScore(a));
+        case 'newest':
+          return issues.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        case 'upvoted':
+          return issues.sort((a, b) => b.upvoteCount - a.upvoteCount);
+        default:
+          return issues;
+      }
+    } catch (error) {
+      console.error('getIssues error:', error);
+      return [];
+    }
+  },
+
+  getIssue: async (id: string): Promise<Issue | null> => {
+    try {
+      const snap = await getDoc(doc(db, 'issues', id));
+      return snap.exists() ? { id: snap.id, ...snap.data() } as Issue : null;
+    } catch (error) {
+      console.error('getIssue error:', error);
+      return null;
+    }
+  },
+
+  createIssue: async (data: Partial<Issue>): Promise<Issue> => {
+    const newIssue = {
+      createdBy: data.createdBy!,
+      creatorName: data.creatorName || 'Resident',
+      creatorPhotoURL: data.creatorPhotoURL || '',
+      title: data.title!,
+      description: data.description!,
+      categoryId: data.categoryId!,
+      status: 'open' as IssueStatus,
+      latitude: data.latitude!,
+      longitude: data.longitude!,
+      address: data.address || 'Unknown Address',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hidden: false,
+      upvoteCount: 0,
+      photos: data.photos || []
+    };
+    const docRef = await addDoc(collection(db, 'issues'), newIssue);
+    return { id: docRef.id, ...newIssue };
+  },
+
+  updateIssueStatus: async (id: string, status: IssueStatus, note?: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), {
+      status,
+      statusNote: note || '',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  toggleUpvote: async (issueId: string, userId: string, isAdding: boolean): Promise<void> => {
+    // Update Firestore upvote count
+    await updateDoc(doc(db, 'issues', issueId), {
+      upvoteCount: increment(isAdding ? 1 : -1)
+    });
+
+    // Track the upvote record
+    const upvoteRef = doc(db, 'upvotes', `${issueId}_${userId}`);
+    if (isAdding) {
+      await setDoc(upvoteRef, { issueId, userId, createdAt: new Date().toISOString() });
+    } else {
+      await deleteDoc(upvoteRef);
+    }
+  },
+
+  deleteIssue: async (id: string, adminName: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), {
+      hidden: true,
+      deletedAt: new Date().toISOString(),
+      deletedByName: adminName,
+    });
+  },
+
+  // --- Comments ---
+
+  getComments: async (issueId: string): Promise<Comment[]> => {
+    try {
+      const q = query(
+        collection(db, 'comments'),
+        where('issueId', '==', issueId),
+        where('hidden', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      const comments = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Comment));
+      return comments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('getComments error:', error);
+      return [];
+    }
+  },
+
+  addComment: async (
+    issueId: string,
+    userId: string,
+    userName: string,
+    userPhotoURL: string,
+    body: string
+  ): Promise<Comment> => {
+    const newComment = {
+      issueId,
+      userId,
+      userName,
+      userPhotoURL,
+      body,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hidden: false
+    };
+    const docRef = await addDoc(collection(db, 'comments'), newComment);
+    return { id: docRef.id, ...newComment };
+  },
+
+  deleteComment: async (id: string, adminName: string): Promise<void> => {
+    await updateDoc(doc(db, 'comments', id), {
+      hidden: true,
+      deletedAt: new Date().toISOString(),
+      deletedByName: adminName,
+    });
+  },
+
+  // --- Notifications ---
+
+  getNotifications: async (userId: string): Promise<Notification[]> => {
+    try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(30)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notification));
+    } catch (error) {
+      console.error('getNotifications error:', error);
+      return [];
+    }
+  },
+
+  addNotification: async (
+    userId: string,
+    title: string,
+    message: string,
+    type: Notification['type'],
+    issueId: string
+  ): Promise<void> => {
+    await addDoc(collection(db, 'notifications'), {
+      userId,
+      title,
+      message,
+      type,
+      issueId,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+  },
+
+  markNotificationsRead: async (userId: string): Promise<void> => {
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', userId),
+      where('read', '==', false)
+    );
+    const snapshot = await getDocs(q);
+    await Promise.all(snapshot.docs.map(d => updateDoc(d.ref, { read: true })));
+  },
+
+  // --- User Stats ---
+
+  getUserStats: async (userId: string): Promise<{ reportCount: number; upvoteCount: number }> => {
+    try {
+      const q = query(collection(db, 'issues'), where('createdBy', '==', userId));
+      const snapshot = await getDocs(q);
+      const issues = snapshot.docs.map(d => d.data() as Issue);
+      return {
+        reportCount: issues.length,
+        upvoteCount: issues.reduce((acc, i) => acc + (i.upvoteCount || 0), 0)
+      };
+    } catch {
+      return { reportCount: 0, upvoteCount: 0 };
+    }
+  },
+
+  // --- Admin ---
+
+  logLogin: async (record: Omit<LoginRecord, 'id'>): Promise<void> => {
+    try {
+      await addDoc(collection(db, 'loginRecords'), record);
+    } catch (e) {
+      console.warn('logLogin failed:', e);
+    }
+  },
+
+  upsertUserRecord: async (record: UserRecord): Promise<void> => {
+    try {
+      await setDoc(doc(db, 'users', record.id), record, { merge: true });
+    } catch (e) {
+      console.warn('upsertUserRecord failed:', e);
+    }
+  },
+
+  getAllUsers: async (): Promise<UserRecord[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as UserRecord));
+    } catch {
+      return [];
+    }
+  },
+
+  updateUserRecord: async (userId: string, data: Partial<UserRecord>): Promise<void> => {
+    await updateDoc(doc(db, 'users', userId), data);
+  },
+
+  // --- Photo Upload ---
+  // Replaces web's FileReader/base64 approach with React Native's blob upload
+
+  uploadPhoto: async (localUri: string, issueId: string): Promise<string> => {
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+    const filename = `issues/${issueId}/${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+    await uploadBytes(storageRef, blob);
+    return await getDownloadURL(storageRef);
+  },
+
+  // --- Reports ---
+
+  submitReport: async (report: Omit<Report, 'id'>): Promise<void> => {
+    await addDoc(collection(db, 'reports'), report);
+  },
+
+  getReports: async (): Promise<Report[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'reports'));
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Report));
+    } catch {
+      return [];
+    }
+  }
+};
