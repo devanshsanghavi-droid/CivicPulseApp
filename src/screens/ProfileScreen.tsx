@@ -12,14 +12,15 @@ import { firestoreService } from '../services/firestoreService';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
 const NEIGHBORHOODS = ['Downtown', 'Highlands', 'Westside', 'Lakeshore', 'Old Town', 'Creekview'];
 
 export default function ProfileScreen() {
-  const { user, setUser } = useApp();
+  const { user, setUser, isDark, toggleDarkMode, theme } = useApp();
   const navigation = useNavigation<Nav>();
   const [stats, setStats] = useState({ reportCount: 0, upvoteCount: 0 });
   const [showNeighborhoods, setShowNeighborhoods] = useState(false);
@@ -32,11 +33,11 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.centered}>
-          <Ionicons name="person-circle-outline" size={72} color="#e5e7eb" />
-          <Text style={styles.authRequired}>AUTHENTICATION REQUIRED</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')}>
+          <Ionicons name="person-circle-outline" size={72} color={theme.border} />
+          <Text style={[styles.authRequired, { color: theme.textMuted }]}>AUTHENTICATION REQUIRED</Text>
+          <TouchableOpacity style={[styles.signInBtn, { backgroundColor: theme.primary }]} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.signInBtnText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
@@ -77,24 +78,24 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header with Large Avatar */}
         <View style={styles.header}>
           {user.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+            <Image source={{ uri: user.photoURL }} style={[styles.avatar, { borderColor: theme.primaryBorder }]} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color={COLORS.primary} />
+            <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }]}>
+              <Ionicons name="person" size={40} color={theme.primary} />
             </View>
           )}
           <View style={styles.headerInfo}>
-            <Text style={styles.name}>{user.name}</Text>
-            <Text style={styles.email}>{user.email}</Text>
+            <Text style={[styles.name, { color: theme.textPrimary }]}>{user.name}</Text>
+            <Text style={[styles.email, { color: theme.textMuted }]}>{user.email}</Text>
             <View style={styles.tagRow}>
-              <View style={styles.roleTag}>
-                <Text style={styles.roleTagText}>{user.role.toUpperCase()}</Text>
+              <View style={[styles.roleTag, { backgroundColor: theme.primaryLight }]}>
+                <Text style={[styles.roleTagText, { color: theme.primary }]}>{user.role.toUpperCase()}</Text>
               </View>
               {user.neighborhood && (
                 <View style={styles.neighborhoodTag}>
@@ -106,58 +107,67 @@ export default function ProfileScreen() {
         </View>
 
         {/* Stats Grid */}
-        <Text style={styles.sectionLabel}>ACTIVITY METRICS</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ACTIVITY METRICS</Text>
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.reportCount}</Text>
-            <Text style={styles.statLabel}>REPORTS LOGGED</Text>
+          <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{stats.reportCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>REPORTS LOGGED</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: COLORS.success }]}>{stats.upvoteCount}</Text>
-            <Text style={styles.statLabel}>COLLECTIVE VOTES</Text>
+          <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.statValue, { color: theme.success }]}>{stats.upvoteCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>COLLECTIVE VOTES</Text>
           </View>
         </View>
 
         {/* Settings with Chevrons */}
-        <Text style={styles.sectionLabel}>ACCOUNT CONTROL</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ACCOUNT CONTROL</Text>
+
+        {/* Appearance / Dark Mode */}
+        <View style={[styles.settingRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="color-palette-outline" size={20} color={theme.textMuted} />
+            <Text style={[styles.settingLabel, { color: theme.textSecondary }]}>Dark Mode</Text>
+          </View>
+          <ThemeToggle isDark={isDark} onToggle={toggleDarkMode} />
+        </View>
 
         {/* Notifications Toggle */}
-        <TouchableOpacity style={styles.settingRow} onPress={() => {}}>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => { }}>
           <View style={styles.settingLeft}>
-            <Ionicons name="notifications-outline" size={20} color={COLORS.textMuted} />
-            <Text style={styles.settingLabel}>Notification Preferences</Text>
+            <Ionicons name="notifications-outline" size={20} color={theme.textMuted} />
+            <Text style={[styles.settingLabel, { color: theme.textSecondary }]}>Notification Preferences</Text>
           </View>
           <View style={styles.settingRight}>
             <Switch
               value={!!user.notifsEnabled}
               onValueChange={toggleNotifs}
-              trackColor={{ false: '#e5e7eb', true: COLORS.primary }}
+              trackColor={{ false: theme.border, true: theme.primary }}
               thumbColor="#ffffff"
             />
           </View>
         </TouchableOpacity>
 
         {/* Neighborhood */}
-        <TouchableOpacity style={styles.settingRow} onPress={() => setShowNeighborhoods(!showNeighborhoods)}>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => setShowNeighborhoods(!showNeighborhoods)}>
           <View style={styles.settingLeft}>
-            <Ionicons name="home-outline" size={20} color={COLORS.textMuted} />
-            <Text style={styles.settingLabel}>Neighborhood Registry</Text>
+            <Ionicons name="home-outline" size={20} color={theme.textMuted} />
+            <Text style={[styles.settingLabel, { color: theme.textSecondary }]}>Neighborhood Registry</Text>
           </View>
           <View style={styles.settingRight}>
-            <Text style={styles.settingValue}>{user.neighborhood || 'Select'}</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Text style={[styles.settingValue, { color: theme.primary }]}>{user.neighborhood || 'Select'}</Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
           </View>
         </TouchableOpacity>
 
         {showNeighborhoods && (
-          <View style={styles.neighborhoodGrid}>
+          <View style={[styles.neighborhoodGrid, { backgroundColor: theme.primaryLight }]}>
             {NEIGHBORHOODS.map(n => (
               <TouchableOpacity
                 key={n}
-                style={[styles.neighborhoodChip, user.neighborhood === n && styles.neighborhoodChipActive]}
+                style={[styles.neighborhoodChip, { backgroundColor: theme.card, borderColor: theme.border }, user.neighborhood === n && { backgroundColor: theme.primary, borderColor: theme.primary }]}
                 onPress={() => selectNeighborhood(n)}
               >
-                <Text style={[styles.neighborhoodChipText, user.neighborhood === n && styles.neighborhoodChipTextActive]}>
+                <Text style={[styles.neighborhoodChipText, { color: theme.textSecondary }, user.neighborhood === n && { color: '#ffffff' }]}>
                   {n}
                 </Text>
               </TouchableOpacity>
@@ -166,20 +176,20 @@ export default function ProfileScreen() {
         )}
 
         {/* Report a Problem */}
-        <TouchableOpacity style={styles.settingRow} onPress={reportProblem}>
+        <TouchableOpacity style={[styles.settingRow, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={reportProblem}>
           <View style={styles.settingLeft}>
-            <Ionicons name="warning-outline" size={20} color={COLORS.textMuted} />
-            <Text style={styles.settingLabel}>Report a Problem</Text>
+            <Ionicons name="warning-outline" size={20} color={theme.textMuted} />
+            <Text style={[styles.settingLabel, { color: theme.textSecondary }]}>Report a Problem</Text>
           </View>
           <View style={styles.settingRight}>
-            <Ionicons name="open-outline" size={16} color={COLORS.textMuted} />
+            <Ionicons name="open-outline" size={16} color={theme.textMuted} />
           </View>
         </TouchableOpacity>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
-          <Text style={styles.logoutText}>TERMINATE SESSION</Text>
+        <TouchableOpacity style={[styles.logoutBtn, isDark && { backgroundColor: '#1c1917', borderColor: '#7f1d1d' }]} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color={theme.error} />
+          <Text style={[styles.logoutText, { color: theme.error }]}>TERMINATE SESSION</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -188,105 +198,65 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1 },
   scroll: { padding: SPACING.lg, paddingBottom: 60 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.lg },
-  authRequired: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted },
-  signInBtn: { backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.xxxl, paddingVertical: SPACING.md },
+  authRequired: { ...TYPOGRAPHY.sectionLabel },
+  signInBtn: { borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.xxxl, paddingVertical: SPACING.md },
   signInBtnText: { ...TYPOGRAPHY.caption, color: '#ffffff', fontWeight: '900', letterSpacing: 2 },
 
   header: { flexDirection: 'row', gap: SPACING.lg, marginBottom: SPACING.xxxl, alignItems: 'center' },
-  avatar: { width: 96, height: 96, borderRadius: BORDER_RADIUS.xxl, borderWidth: 2, borderColor: COLORS.primaryBorder },
+  avatar: { width: 96, height: 96, borderRadius: BORDER_RADIUS.xxl, borderWidth: 2 },
   avatarPlaceholder: {
     width: 96, height: 96, borderRadius: BORDER_RADIUS.xxl,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: COLORS.primaryBorder,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
   },
   headerInfo: { flex: 1, justifyContent: 'center' },
-  name: { ...TYPOGRAPHY.pageTitle, fontSize: 22, color: COLORS.textPrimary, marginBottom: SPACING.xs },
-  email: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600', marginBottom: SPACING.sm },
+  name: { ...TYPOGRAPHY.pageTitle, fontSize: 22, marginBottom: SPACING.xs },
+  email: { ...TYPOGRAPHY.caption, fontWeight: '600', marginBottom: SPACING.sm },
   tagRow: { flexDirection: 'row', gap: SPACING.sm },
-  roleTag: { backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
-  roleTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, letterSpacing: 1 },
+  roleTag: { borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
+  roleTagText: { ...TYPOGRAPHY.microLabel, letterSpacing: 1 },
   neighborhoodTag: { backgroundColor: '#dcfce7', borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
-  neighborhoodTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.success, letterSpacing: 1 },
+  neighborhoodTagText: { ...TYPOGRAPHY.microLabel, color: '#16a34a', letterSpacing: 1 },
 
-  sectionLabel: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.md, marginTop: SPACING.lg },
+  sectionLabel: { ...TYPOGRAPHY.sectionLabel, marginBottom: SPACING.md, marginTop: SPACING.lg },
 
-  // Stats Grid (2-column layout)
-  statsGrid: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.xl,
-  },
+  statsGrid: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.xl },
   statCard: {
-    flex: 1, 
-    backgroundColor: COLORS.cardBackground, 
-    borderRadius: BORDER_RADIUS.xl,
-    borderWidth: 1, 
-    borderColor: COLORS.border,
-    padding: SPACING.lg, 
-    alignItems: 'center',
+    flex: 1, borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1, padding: SPACING.lg, alignItems: 'center',
     ...SHADOWS.subtle,
   },
-  statValue: { ...TYPOGRAPHY.pageTitle, fontSize: 28, color: COLORS.primary, marginBottom: SPACING.xs },
-  statLabel: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, textAlign: 'center' },
+  statValue: { ...TYPOGRAPHY.pageTitle, fontSize: 28, marginBottom: SPACING.xs },
+  statLabel: { ...TYPOGRAPHY.microLabel, textAlign: 'center' },
 
-  // Settings Rows with Chevrons
   settingRow: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.cardBackground, 
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1, 
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.lg, 
-    paddingVertical: SPACING.md, 
-    marginBottom: SPACING.sm,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: BORDER_RADIUS.lg, borderWidth: 1,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, marginBottom: SPACING.sm,
   },
-  settingLeft: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: SPACING.sm,
-  },
-  settingLabel: { 
-    ...TYPOGRAPHY.body, 
-    fontWeight: '700', 
-    color: COLORS.textSecondary,
-  },
-  settingRight: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: SPACING.xs,
-  },
-  settingValue: { 
-    ...TYPOGRAPHY.caption, 
-    fontWeight: '800', 
-    color: COLORS.primary, 
-    textTransform: 'uppercase', 
-    letterSpacing: 1,
-  },
+  settingLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  settingLabel: { ...TYPOGRAPHY.body, fontWeight: '700' },
+  settingRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  settingValue: { ...TYPOGRAPHY.caption, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
 
   neighborhoodGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm,
-    backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.lg, 
-    padding: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm,
   },
   neighborhoodChip: {
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBackground,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md, borderWidth: 1,
   },
-  neighborhoodChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  neighborhoodChipText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary },
-  neighborhoodChipTextActive: { color: '#ffffff' },
+  neighborhoodChipText: { ...TYPOGRAPHY.caption, fontWeight: '700' },
 
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
-    borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.lg, 
+    borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md, marginTop: SPACING.xl,
   },
-  logoutText: { ...TYPOGRAPHY.caption, fontWeight: '900', color: COLORS.error, letterSpacing: 2 },
+  logoutText: { ...TYPOGRAPHY.caption, fontWeight: '900', letterSpacing: 2 },
 });

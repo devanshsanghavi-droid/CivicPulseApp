@@ -7,6 +7,8 @@ import { User, Notification } from '../types';
 import { storageService } from '../services/storage';
 import { firestoreService } from '../services/firestoreService';
 import { onAuthStateChange, convertFirebaseUserToAppUser, configureGoogleSignIn } from '../services/firebaseAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { lightTheme, darkTheme, AppTheme } from '../constants/theme';
 
 interface AppContextType {
   user: User | null;
@@ -19,6 +21,9 @@ interface AppContextType {
   locationExplained: boolean;
   setLocationExplained: (v: boolean) => void;
   isAuthLoading: boolean;
+  isDark: boolean;
+  toggleDarkMode: () => void;
+  theme: AppTheme;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,14 +34,25 @@ export const useApp = () => {
   return ctx;
 };
 
+const DARK_MODE_KEY = 'civicpulse_darkMode';
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUserState] = useState<User | null>(null);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [locationExplained, setLocationExplained] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isDark, setIsDark] = useState(false);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const unreadCount = notifs.filter(n => !n.read).length;
+  const theme = isDark ? darkTheme : lightTheme;
+
+  // Load dark mode preference on start
+  useEffect(() => {
+    AsyncStorage.getItem(DARK_MODE_KEY).then(val => {
+      if (val === 'true') setIsDark(true);
+    }).catch(() => { });
+  }, []);
 
   // Configure Google Sign-In once
   useEffect(() => {
@@ -64,6 +80,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       await storageService.clearCurrentUser();
     }
+  };
+
+  const toggleDarkMode = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      AsyncStorage.setItem(DARK_MODE_KEY, next ? 'true' : 'false').catch(() => { });
+      return next;
+    });
   };
 
   const refreshNotifs = async () => {
@@ -108,6 +132,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       locationExplained,
       setLocationExplained,
       isAuthLoading,
+      isDark,
+      toggleDarkMode,
+      theme,
     }}>
       {children}
     </AppContext.Provider>

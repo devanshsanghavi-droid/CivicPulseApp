@@ -16,7 +16,7 @@ import { Issue } from '../types';
 import { CATEGORIES } from '../constants';
 import { useApp } from '../context/AppContext';
 import { RootStackParamList, MainTabParamList } from '../navigation/AppNavigator';
-import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
+import { TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList>,
@@ -32,14 +32,8 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.05,
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  open: COLORS.open,
-  acknowledged: COLORS.acknowledged,
-  resolved: COLORS.resolved,
-};
-
 export default function MapScreen() {
-  const { user, locationExplained, setLocationExplained } = useApp();
+  const { user, locationExplained, setLocationExplained, isDark, theme } = useApp();
   const navigation = useNavigation<Nav>();
   const mapRef = useRef<MapView>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -79,6 +73,9 @@ export default function MapScreen() {
     }
   };
 
+  const overlayBg = isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.95)';
+  const overlayBgLight = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.9)';
+
   return (
     <View style={styles.container}>
       <MapView
@@ -87,9 +84,10 @@ export default function MapScreen() {
         initialRegion={region}
         showsUserLocation
         showsMyLocationButton={false}
+        userInterfaceStyle={isDark ? 'dark' : 'light'}
       >
         {issues.map(issue => {
-          const color = STATUS_COLORS[issue.status] || STATUS_COLORS.open;
+          const color = theme[issue.status as 'open' | 'acknowledged' | 'resolved'] || theme.open;
           const category = CATEGORIES.find(c => c.id === issue.categoryId);
           return (
             <Marker
@@ -106,7 +104,7 @@ export default function MapScreen() {
                     <View style={[styles.calloutDot, { backgroundColor: color }]} />
                     <Text style={styles.calloutStatus}>{issue.status.toUpperCase()}</Text>
                   </View>
-                  <Text style={styles.calloutCategory}>{category?.name}</Text>
+                  <Text style={[styles.calloutCategory, { color: theme.primary }]}>{category?.name}</Text>
                   <Text style={styles.calloutTitle}>{issue.title}</Text>
                   <Text style={styles.calloutCta}>Tap to view full report →</Text>
                 </View>
@@ -117,39 +115,38 @@ export default function MapScreen() {
       </MapView>
 
       {/* Header pill */}
-      <View style={styles.headerPill}>
-        <View style={[styles.headerDot, { backgroundColor: COLORS.primary }]} />
-        <Text style={styles.headerText}>LIVE GEOSPATIAL FEED</Text>
+      <View style={[styles.headerPill, { backgroundColor: overlayBg }]}>
+        <View style={[styles.headerDot, { backgroundColor: theme.primary }]} />
+        <Text style={[styles.headerText, { color: theme.textPrimary }]}>LIVE GEOSPATIAL FEED</Text>
       </View>
 
-      {/* Loading overlay */}
       {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
+        <View style={[styles.loadingOverlay, { backgroundColor: overlayBgLight }]}>
+          <ActivityIndicator size="small" color={theme.primary} />
         </View>
       )}
 
       {/* Legend */}
-      <View style={styles.legend}>
+      <View style={[styles.legend, { backgroundColor: overlayBg }]}>
         <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: COLORS.open }]} />
-          <Text style={styles.legendText}>ACTIVE INCIDENT</Text>
+          <View style={[styles.legendDot, { backgroundColor: theme.open }]} />
+          <Text style={[styles.legendText, { color: theme.textSecondary }]}>ACTIVE INCIDENT</Text>
         </View>
         <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: COLORS.resolved }]} />
-          <Text style={styles.legendText}>RESOLVED STATE</Text>
+          <View style={[styles.legendDot, { backgroundColor: theme.resolved }]} />
+          <Text style={[styles.legendText, { color: theme.textSecondary }]}>RESOLVED STATE</Text>
         </View>
       </View>
 
       {/* My location button */}
-      <TouchableOpacity style={styles.locationBtn} onPress={getUserLocation}>
-        <Ionicons name="locate" size={22} color={COLORS.primary} />
+      <TouchableOpacity style={[styles.locationBtn, { backgroundColor: theme.card }]} onPress={getUserLocation}>
+        <Ionicons name="locate" size={22} color={theme.primary} />
       </TouchableOpacity>
 
       {/* Report FAB */}
       {user && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: theme.primary, ...SHADOWS.colored(theme.primary) }]}
           onPress={() => navigation.navigate('Main', { screen: 'Report' })}
           activeOpacity={0.85}
         >
@@ -165,47 +162,39 @@ const styles = StyleSheet.create({
   map: { flex: 1 },
 
   headerPill: {
-    position: 'absolute', top: 16,
-    alignSelf: 'center',
+    position: 'absolute', top: 16, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.lg, paddingVertical: 10,
     ...SHADOWS.medium,
   },
-  headerDot: {
-    width: 8, height: 8, borderRadius: 4,
-  },
-  headerText: { ...TYPOGRAPHY.microLabel, color: COLORS.textPrimary },
+  headerDot: { width: 8, height: 8, borderRadius: 4 },
+  headerText: { ...TYPOGRAPHY.microLabel },
 
   loadingOverlay: {
     position: 'absolute', top: 60, alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: BORDER_RADIUS.lg, padding: SPACING.sm,
   },
 
   legend: {
     position: 'absolute', bottom: 100, left: SPACING.lg,
-    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, gap: SPACING.sm,
     ...SHADOWS.subtle,
   },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   legendDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#ffffff' },
-  legendText: { ...TYPOGRAPHY.microLabel, color: COLORS.textSecondary },
+  legendText: { ...TYPOGRAPHY.microLabel },
 
   locationBtn: {
     position: 'absolute', bottom: 100, right: SPACING.lg,
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.cardBackground, alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     ...SHADOWS.subtle,
   },
 
   fab: {
     position: 'absolute', bottom: SPACING.xxl, right: SPACING.lg,
     width: 58, height: 58, borderRadius: 29,
-    backgroundColor: COLORS.primary,
     alignItems: 'center', justifyContent: 'center',
-    ...SHADOWS.colored(COLORS.primary),
     borderWidth: 3, borderColor: '#ffffff',
   },
 
@@ -213,8 +202,8 @@ const styles = StyleSheet.create({
   calloutInner: { padding: SPACING.md },
   calloutStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   calloutDot: { width: 6, height: 6, borderRadius: 3 },
-  calloutStatus: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, letterSpacing: 1 },
-  calloutCategory: { ...TYPOGRAPHY.caption, color: COLORS.primary, textTransform: 'uppercase', marginBottom: 4 },
-  calloutTitle: { ...TYPOGRAPHY.body, fontSize: 14, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
-  calloutCta: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textMuted },
+  calloutStatus: { ...TYPOGRAPHY.microLabel, color: '#9ca3af', letterSpacing: 1 },
+  calloutCategory: { ...TYPOGRAPHY.caption, textTransform: 'uppercase', marginBottom: 4 },
+  calloutTitle: { ...TYPOGRAPHY.body, fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 6 },
+  calloutCta: { ...TYPOGRAPHY.caption, fontWeight: '700', color: '#9ca3af' },
 });

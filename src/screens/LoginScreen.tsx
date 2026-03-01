@@ -2,15 +2,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, SafeAreaView
+  ActivityIndicator, Alert, SafeAreaView, ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../context/AppContext';
 import { signInWithGoogle } from '../services/firebaseAuth';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
+import { SplineBackground } from '../components/SplineBackground';
+import { TYPOGRAPHY, BORDER_RADIUS } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -24,7 +26,6 @@ export default function LoginScreen() {
     try {
       const user = await signInWithGoogle();
       await setUser(user);
-      // Navigation handled automatically by AppNavigator auth state
     } catch (err: any) {
       Alert.alert('Sign-In Failed', err.message || 'Failed to sign in with Google. Please try again.');
     } finally {
@@ -33,124 +34,152 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        {/* Logo */}
-        <View style={styles.logoWrap}>
-          <Ionicons name="shield-checkmark" size={44} color="#ffffff" />
-        </View>
-
-        <Text style={styles.appName}>CivicPulse</Text>
-        <Text style={styles.subtitle}>AUTHORIZED PERSONNEL ONLY</Text>
-
-        {/* Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Resident SSO</Text>
-          <Text style={styles.cardSub}>VERIFIED IDENTITY REQUIRED</Text>
-
-          <TouchableOpacity
-            style={[styles.googleBtn, isLoading && styles.googleBtnDisabled]}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            {isLoading ? (
-              <>
-                <ActivityIndicator size="small" color="#4b5563" />
-                <Text style={styles.googleBtnText}>Signing in...</Text>
-              </>
-            ) : (
-              <>
-                {/* Google G logo colors */}
-                <View style={styles.googleIcon}>
-                  <Text style={styles.googleIconText}>G</Text>
-                </View>
-                <Text style={styles.googleBtnText}>Sign in with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Environment Indicator */}
-        <View style={styles.environmentIndicator}>
-          <Text style={styles.environmentText}>Environment: Development</Text>
-          <Text style={styles.versionText}>v1.0.0</Text>
-        </View>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>RETURN TO HUB</Text>
-        </TouchableOpacity>
+    <View style={styles.root}>
+      {/* Spline 3D background — bottom half */}
+      <View style={styles.splineContainer}>
+        <SplineBackground />
       </View>
-    </SafeAreaView>
+
+      {/* Gradient overlay so form stays readable */}
+      <LinearGradient
+        colors={['#000000', '#000000cc', '#00000000']}
+        style={styles.gradient}
+      />
+
+      {/* Content */}
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Text style={styles.appName}>
+              Civic<Text style={styles.appPulse}>Pulse</Text>
+            </Text>
+            <Text style={styles.citySub}>
+              Los Altos Community Platform
+            </Text>
+          </View>
+
+          {/* Login card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              Welcome back
+            </Text>
+            <Text style={styles.cardSub}>
+              Sign in to report and track issues in your community
+            </Text>
+
+            {/* Google Sign In button */}
+            <TouchableOpacity
+              onPress={handleGoogleSignIn}
+              style={[styles.googleBtn, isLoading && styles.googleBtnDisabled]}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#111827" />
+              ) : (
+                <>
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleIconText}>G</Text>
+                  </View>
+                  <Text style={styles.googleBtnText}>
+                    Continue with Google
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>RETURN TO HUB</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.cardBackground },
-  container: {
+  root: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  splineContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+  },
+  gradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    zIndex: 1,
+  },
+  safe: {
+    flex: 1,
+    zIndex: 2,
+  },
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    padding: 32,
   },
-  logoWrap: {
-    width: 80, height: 80,
-    backgroundColor: COLORS.primary,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    ...SHADOWS.colored(COLORS.primary),
-  },
-  appName: {
-    ...TYPOGRAPHY.pageTitle,
-    fontSize: 36,
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  subtitle: {
-    ...TYPOGRAPHY.sectionLabel,
-    color: COLORS.primary,
+  logoContainer: {
     marginBottom: 40,
   },
+  appName: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -1,
+  },
+  appPulse: {
+    color: '#3b82f6',
+  },
+  citySub: {
+    color: '#94a3b8',
+    marginTop: 4,
+    fontSize: 14,
+  },
   card: {
-    width: '100%',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.xxxl,
-    padding: SPACING.xxxl,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    ...SHADOWS.medium,
-    marginBottom: SPACING.xxxl,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 24,
+    padding: 32,
   },
   cardTitle: {
-    ...TYPOGRAPHY.cardTitle,
-    fontSize: 20,
-    color: COLORS.textPrimary,
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
   },
   cardSub: {
-    ...TYPOGRAPHY.microLabel,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.xxxl,
+    color: '#94a3b8',
+    fontSize: 14,
+    marginBottom: 32,
   },
   googleBtn: {
-    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: COLORS.cardBackground,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderRadius: BORDER_RADIUS.round,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
   },
-  googleBtnDisabled: { opacity: 0.5 },
-  googleIcon: {
-    width: 22, height: 22,
+  googleBtnDisabled: {
+    opacity: 0.7,
+  },
+  googleIconContainer: {
+    width: 22,
+    height: 22,
     backgroundColor: '#4285F4',
     borderRadius: 4,
     alignItems: 'center',
@@ -162,29 +191,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   googleBtnText: {
-    ...TYPOGRAPHY.body,
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 16,
   },
-  backBtn: { marginTop: SPACING.sm },
+  backBtn: {
+    marginTop: 24,
+    alignSelf: 'center',
+  },
   backBtnText: {
     ...TYPOGRAPHY.microLabel,
-    color: '#d1d5db',
-  },
-  environmentIndicator: {
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  environmentText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-  },
-  versionText: {
-    ...TYPOGRAPHY.microLabel,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    marginTop: 2,
+    color: '#94a3b8',
+    textDecorationLine: 'underline',
   },
 });

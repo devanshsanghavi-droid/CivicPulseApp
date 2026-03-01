@@ -1,5 +1,5 @@
 // src/screens/IssueDetailScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, TextInput, ActivityIndicator,
@@ -15,20 +15,25 @@ import { Issue, Comment } from '../types';
 import { CATEGORIES } from '../constants';
 import { useApp } from '../context/AppContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
+import { TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type RouteType = RouteProp<RootStackParamList, 'IssueDetail'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; marker: string }> = {
+const STATUS_LIGHT: Record<string, { bg: string; text: string; marker: string }> = {
   open: { bg: '#fee2e2', text: '#dc2626', marker: '#2563eb' },
   acknowledged: { bg: '#fef3c7', text: '#d97706', marker: '#d97706' },
   resolved: { bg: '#dcfce7', text: '#16a34a', marker: '#16a34a' },
 };
+const STATUS_DARK: Record<string, { bg: string; text: string; marker: string }> = {
+  open: { bg: '#7f1d1d', text: '#fca5a5', marker: '#3b82f6' },
+  acknowledged: { bg: '#78350f', text: '#fcd34d', marker: '#f59e0b' },
+  resolved: { bg: '#14532d', text: '#86efac', marker: '#22c55e' },
+};
 
 export default function IssueDetailScreen() {
-  const { user } = useApp();
+  const { user, isDark, theme } = useApp();
   const route = useRoute<RouteType>();
   const navigation = useNavigation<any>();
   const { issueId } = route.params;
@@ -42,9 +47,7 @@ export default function IssueDetailScreen() {
   const [upvoting, setUpvoting] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
-  useEffect(() => {
-    loadData();
-  }, [issueId]);
+  useEffect(() => { loadData(); }, [issueId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -55,14 +58,9 @@ export default function IssueDetailScreen() {
       ]);
       setIssue(issueData);
       setComments(commentsData);
-      if (user) {
-        setHasUpvoted(await storageService.hasUpvoted(issueId, user.id));
-      }
-    } catch (err) {
-      console.error('IssueDetail load error:', err);
-    } finally {
-      setLoading(false);
-    }
+      if (user) setHasUpvoted(await storageService.hasUpvoted(issueId, user.id));
+    } catch (err) { console.error('IssueDetail load error:', err); }
+    finally { setLoading(false); }
   };
 
   const handleUpvote = async () => {
@@ -73,104 +71,53 @@ export default function IssueDetailScreen() {
       const isAdding = result === 'added';
       await firestoreService.toggleUpvote(issueId, user.id, isAdding);
       setHasUpvoted(isAdding);
-      setIssue(prev => prev ? {
-        ...prev,
-        upvoteCount: prev.upvoteCount + (isAdding ? 1 : -1)
-      } : prev);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update upvote. Please try again.');
-    } finally {
-      setUpvoting(false);
-    }
+      setIssue(prev => prev ? { ...prev, upvoteCount: prev.upvoteCount + (isAdding ? 1 : -1) } : prev);
+    } catch { Alert.alert('Error', 'Failed to update upvote.'); }
+    finally { setUpvoting(false); }
   };
 
   const handleComment = async () => {
     if (!user || !newComment.trim() || commenting) return;
     setCommenting(true);
     try {
-      const comment = await firestoreService.addComment(
-        issueId, user.id, user.name, user.photoURL || '', newComment.trim()
-      );
+      const comment = await firestoreService.addComment(issueId, user.id, user.name, user.photoURL || '', newComment.trim());
       setComments(prev => [comment, ...prev]);
       setNewComment('');
-    } catch (err) {
-      Alert.alert('Error', 'Failed to post comment.');
-    } finally {
-      setCommenting(false);
-    }
+    } catch { Alert.alert('Error', 'Failed to post comment.'); }
+    finally { setCommenting(false); }
   };
 
   const handlePhotoScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setActivePhotoIndex(index);
+    setActivePhotoIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
   };
 
   const handleExpandMap = () => {
     if (!issue) return;
-    navigation.navigate('Main', {
-      screen: 'Map',
-      params: { focusIssueId: issue.id, latitude: issue.latitude, longitude: issue.longitude }
-    });
+    navigation.navigate('Main', { screen: 'Map', params: { focusIssueId: issue.id, latitude: issue.latitude, longitude: issue.longitude } });
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
-
-  if (!issue) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Issue not found.</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={[styles.centered, { backgroundColor: theme.background }]}><ActivityIndicator size="large" color={theme.primary} /></View>;
+  if (!issue) return <View style={[styles.centered, { backgroundColor: theme.background }]}><Text style={[styles.errorText, { color: theme.textMuted }]}>Issue not found.</Text></View>;
 
   const category = CATEGORIES.find(c => c.id === issue.categoryId);
-  const statusColors = STATUS_COLORS[issue.status] || STATUS_COLORS.open;
+  const sc = (isDark ? STATUS_DARK : STATUS_LIGHT)[issue.status] || (isDark ? STATUS_DARK : STATUS_LIGHT).open;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* Photos with Dot Indicators */}
           {issue.photos.length > 0 && (
             <View style={styles.photoContainer}>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                style={styles.photoScroll}
-                onScroll={handlePhotoScroll}
-                scrollEventThrottle={16}
-              >
-                {issue.photos.map((photo, index) => (
+              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.photoScroll} onScroll={handlePhotoScroll} scrollEventThrottle={16}>
+                {issue.photos.map((photo) => (
                   <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
                 ))}
               </ScrollView>
-              {/* Dot Indicators */}
               {issue.photos.length > 1 && (
                 <View style={styles.pageIndicators}>
                   {issue.photos.map((_, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.pageDot,
-                        activePhotoIndex === index ? styles.activeDot : styles.inactiveDot,
-                      ]}
-                    />
+                    <View key={index} style={[styles.pageDot, activePhotoIndex === index ? [styles.activeDot, { backgroundColor: theme.primary }] : [styles.inactiveDot, { backgroundColor: theme.textMuted }]]} />
                   ))}
                 </View>
               )}
@@ -178,151 +125,120 @@ export default function IssueDetailScreen() {
           )}
 
           <View style={styles.body}>
-            {/* Category + Status */}
             <View style={styles.metaRow}>
-              <Text style={styles.category}>{category?.name}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-                <Text style={[styles.statusText, { color: statusColors.text }]}>
-                  {issue.status.toUpperCase()}
-                </Text>
+              <Text style={[styles.category, { color: theme.primary }]}>{category?.name}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+                <Text style={[styles.statusText, { color: sc.text }]}>{issue.status.toUpperCase()}</Text>
               </View>
             </View>
 
-            <Text style={styles.title}>{issue.title}</Text>
-            <Text style={styles.description}>{issue.description}</Text>
+            <Text style={[styles.title, { color: theme.textPrimary }]}>{issue.title}</Text>
+            <Text style={[styles.description, { color: theme.textSecondary }]}>{issue.description}</Text>
 
             {issue.statusNote && (
-              <View style={styles.statusNote}>
-                <Ionicons name="information-circle" size={16} color="#2563eb" />
-                <Text style={styles.statusNoteText}>{issue.statusNote}</Text>
+              <View style={[styles.statusNote, { backgroundColor: theme.primaryLight, borderLeftColor: theme.primary }]}>
+                <Ionicons name="information-circle" size={16} color={theme.primary} />
+                <Text style={[styles.statusNoteText, { color: theme.primary }]}>{issue.statusNote}</Text>
               </View>
             )}
 
-            {/* Reporter + Date */}
             <View style={styles.reporterRow}>
               {issue.creatorPhotoURL ? (
                 <Image source={{ uri: issue.creatorPhotoURL }} style={styles.reporterAvatar} />
               ) : (
-                <View style={styles.reporterAvatarPlaceholder}>
-                  <Ionicons name="person" size={14} color="#9ca3af" />
+                <View style={[styles.reporterAvatarPlaceholder, { backgroundColor: theme.border }]}>
+                  <Ionicons name="person" size={14} color={theme.textMuted} />
                 </View>
               )}
-              <Text style={styles.reporterName}>{issue.creatorName}</Text>
-              <Text style={styles.reporterDate}>
+              <Text style={[styles.reporterName, { color: theme.textSecondary }]}>{issue.creatorName}</Text>
+              <Text style={[styles.reporterDate, { color: theme.textMuted }]}>
                 {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>
             </View>
 
-            {/* Map Preview */}
             {issue.latitude != null && issue.longitude != null && (
               <View style={styles.mapSection}>
-                <MapView
-                  style={styles.mapPreview}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}
-                  initialRegion={{
-                    latitude: issue.latitude,
-                    longitude: issue.longitude,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                  }}
-                >
-                  <Marker
-                    coordinate={{ latitude: issue.latitude, longitude: issue.longitude }}
-                    pinColor={statusColors.marker}
-                  />
+                <MapView style={styles.mapPreview} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+                  initialRegion={{ latitude: issue.latitude, longitude: issue.longitude, latitudeDelta: 0.005, longitudeDelta: 0.005 }}>
+                  <Marker coordinate={{ latitude: issue.latitude, longitude: issue.longitude }} pinColor={sc.marker} />
                 </MapView>
                 {issue.address && (
                   <View style={styles.locationRow}>
-                    <Ionicons name="location" size={14} color="#2563eb" />
-                    <Text style={styles.locationText}>{issue.address}</Text>
+                    <Ionicons name="location" size={14} color={theme.primary} />
+                    <Text style={[styles.locationText, { color: theme.textSecondary }]}>{issue.address}</Text>
                   </View>
                 )}
-                <TouchableOpacity style={styles.expandMapBtn} onPress={handleExpandMap} activeOpacity={0.8}>
-                  <Ionicons name="expand-outline" size={16} color={COLORS.primary} />
-                  <Text style={styles.expandMapText}>Expand Map</Text>
+                <TouchableOpacity style={[styles.expandMapBtn, { backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }]} onPress={handleExpandMap} activeOpacity={0.8}>
+                  <Ionicons name="expand-outline" size={16} color={theme.primary} />
+                  <Text style={[styles.expandMapText, { color: theme.primary }]}>Expand Map</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Location text only (no map) */}
             {(issue.latitude == null || issue.longitude == null) && issue.address && (
               <View style={styles.locationRow}>
-                <Ionicons name="location" size={14} color="#2563eb" />
-                <Text style={styles.locationText}>{issue.address}</Text>
+                <Ionicons name="location" size={14} color={theme.primary} />
+                <Text style={[styles.locationText, { color: theme.textSecondary }]}>{issue.address}</Text>
               </View>
             )}
 
-            {/* Upvote Button */}
             <TouchableOpacity
-              style={[styles.upvoteBtn, hasUpvoted && styles.upvoteBtnActive]}
-              onPress={handleUpvote}
-              disabled={!user || upvoting}
-              activeOpacity={0.8}
-            >
+              style={[styles.upvoteBtn, { borderColor: theme.primary }, hasUpvoted && { backgroundColor: theme.primary }]}
+              onPress={handleUpvote} disabled={!user || upvoting} activeOpacity={0.8}>
               {upvoting ? (
-                <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : COLORS.primary} />
+                <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : theme.primary} />
               ) : (
                 <>
-                  <Ionicons name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"} size={18} color={hasUpvoted ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.upvoteBtnText, hasUpvoted && styles.upvoteBtnTextActive]}>
+                  <Ionicons name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"} size={18} color={hasUpvoted ? '#ffffff' : theme.primary} />
+                  <Text style={[styles.upvoteBtnText, { color: theme.primary }, hasUpvoted && { color: '#ffffff' }]}>
                     {issue.upvoteCount} {issue.upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Comments */}
-            <Text style={styles.sectionLabel}>COMMUNITY DISCUSSION</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>COMMUNITY DISCUSSION</Text>
 
             {comments.length === 0 ? (
-              <Text style={styles.noComments}>No comments yet. Be the first!</Text>
+              <Text style={[styles.noComments, { color: theme.textMuted }]}>No comments yet. Be the first!</Text>
             ) : (
               comments.map(comment => (
-                <View key={comment.id} style={styles.commentCard}>
+                <View key={comment.id} style={[styles.commentCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={styles.commentHeader}>
                     {comment.userPhotoURL ? (
                       <Image source={{ uri: comment.userPhotoURL }} style={styles.commentAvatar} />
                     ) : (
-                      <View style={styles.commentAvatarPlaceholder}>
-                        <Ionicons name="person" size={12} color="#9ca3af" />
+                      <View style={[styles.commentAvatarPlaceholder, { backgroundColor: theme.border }]}>
+                        <Ionicons name="person" size={12} color={theme.textMuted} />
                       </View>
                     )}
-                    <Text style={styles.commentAuthor}>{comment.userName}</Text>
-                    <Text style={styles.commentDate}>
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </Text>
+                    <Text style={[styles.commentAuthor, { color: theme.textSecondary }]}>{comment.userName}</Text>
+                    <Text style={[styles.commentDate, { color: theme.textMuted }]}>{new Date(comment.createdAt).toLocaleDateString()}</Text>
                   </View>
-                  <Text style={styles.commentBody}>{comment.body}</Text>
+                  <Text style={[styles.commentBody, { color: theme.textSecondary }]}>{comment.body}</Text>
                 </View>
               ))
             )}
           </View>
         </ScrollView>
 
-        {/* Sticky Comment Footer */}
         {user && (
-          <View style={styles.commentFooter}>
+          <View style={[styles.commentFooter, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
             <View style={styles.commentInputRow}>
               <TextInput
-                style={styles.commentInput}
+                style={[styles.commentInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.textPrimary }]}
                 placeholder="Add a comment..."
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={theme.textMuted}
                 value={newComment}
                 onChangeText={setNewComment}
                 multiline
               />
               <TouchableOpacity
-                style={[styles.commentSendBtn, (!newComment.trim() || commenting) && styles.commentSendBtnDisabled]}
+                style={[styles.commentSendBtn, { backgroundColor: theme.primary }, (!newComment.trim() || commenting) && { opacity: 0.5 }]}
                 onPress={handleComment}
                 disabled={!newComment.trim() || commenting}
               >
-                {commenting
-                  ? <ActivityIndicator size="small" color="#ffffff" />
-                  : <Ionicons name="send" size={16} color="#ffffff" />
-                }
+                {commenting ? <ActivityIndicator size="small" color="#ffffff" /> : <Ionicons name="send" size={16} color="#ffffff" />}
               </TouchableOpacity>
             </View>
           </View>
@@ -333,125 +249,63 @@ export default function IssueDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1 },
   container: { flex: 1 },
   scroll: { paddingBottom: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { ...TYPOGRAPHY.body, color: COLORS.textMuted, fontWeight: '700' },
+  errorText: { ...TYPOGRAPHY.body, fontWeight: '700' },
 
-  // Photo Gallery
   photoContainer: { marginBottom: SPACING.lg },
   photoScroll: { height: 240 },
   photo: { width: SCREEN_WIDTH, height: 240, resizeMode: 'cover' },
-  pageIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-    gap: SPACING.xs,
-  },
-  pageDot: {
-    height: 8,
-    borderRadius: 4,
-  },
-  activeDot: {
-    width: 20,
-    backgroundColor: '#2563eb',
-  },
-  inactiveDot: {
-    width: 8,
-    backgroundColor: '#d1d5db',
-  },
+  pageIndicators: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: SPACING.sm, gap: SPACING.xs },
+  pageDot: { height: 8, borderRadius: 4 },
+  activeDot: { width: 20 },
+  inactiveDot: { width: 8 },
 
   body: { padding: SPACING.lg },
-
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
-  category: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, flex: 1 },
+  category: { ...TYPOGRAPHY.microLabel, flex: 1 },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.round },
   statusText: { ...TYPOGRAPHY.microLabel, letterSpacing: 1 },
 
-  title: { ...TYPOGRAPHY.cardTitle, fontSize: 24, color: COLORS.textPrimary, marginBottom: SPACING.md },
-  description: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, lineHeight: 24, marginBottom: SPACING.md },
+  title: { ...TYPOGRAPHY.cardTitle, fontSize: 24, marginBottom: SPACING.md },
+  description: { ...TYPOGRAPHY.body, lineHeight: 24, marginBottom: SPACING.md },
 
-  statusNote: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md,
-    borderLeftWidth: 4, borderLeftColor: COLORS.primary,
-  },
-  statusNoteText: { ...TYPOGRAPHY.body, fontSize: 13, color: '#1d4ed8', flex: 1, lineHeight: 20 },
+  statusNote: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderLeftWidth: 4 },
+  statusNoteText: { ...TYPOGRAPHY.body, fontSize: 13, flex: 1, lineHeight: 20 },
 
   reporterRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   reporterAvatar: { width: 28, height: 28, borderRadius: 14 },
-  reporterAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  reporterName: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary, flex: 1 },
-  reporterDate: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600' },
+  reporterAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  reporterName: { ...TYPOGRAPHY.caption, fontWeight: '700', flex: 1 },
+  reporterDate: { ...TYPOGRAPHY.caption, fontWeight: '600' },
 
-  // Map section
   mapSection: { marginBottom: SPACING.xl },
-  mapPreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
-  },
-  expandMapBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs,
-    marginTop: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    backgroundColor: COLORS.primaryLight,
-  },
-  expandMapText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.primary },
+  mapPreview: { width: '100%', height: 200, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden' },
+  expandMapBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs, marginTop: SPACING.sm, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
+  expandMapText: { ...TYPOGRAPHY.caption, fontWeight: '700' },
 
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.sm, marginBottom: SPACING.xl },
-  locationText: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.textSecondary, flex: 1 },
+  locationText: { ...TYPOGRAPHY.body, fontSize: 13, flex: 1 },
 
-  upvoteBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    borderWidth: 2, borderColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.md, justifyContent: 'center', marginBottom: SPACING.xl,
-  },
-  upvoteBtnActive: { backgroundColor: COLORS.primary },
-  upvoteBtnText: { ...TYPOGRAPHY.body, fontSize: 15, fontWeight: '800', color: COLORS.primary },
-  upvoteBtnTextActive: { color: '#ffffff' },
+  upvoteBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, borderWidth: 2, borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.md, justifyContent: 'center', marginBottom: SPACING.xl },
+  upvoteBtnText: { ...TYPOGRAPHY.body, fontSize: 15, fontWeight: '800' },
 
-  sectionLabel: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.md },
+  sectionLabel: { ...TYPOGRAPHY.sectionLabel, marginBottom: SPACING.md },
 
-  // Sticky comment footer
-  commentFooter: {
-    backgroundColor: COLORS.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-  },
+  commentFooter: { borderTopWidth: 1, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
   commentInputRow: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-end' },
-  commentInput: {
-    flex: 1, backgroundColor: COLORS.background, borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
-    ...TYPOGRAPHY.body, color: COLORS.textPrimary, maxHeight: 100,
-  },
-  commentSendBtn: {
-    width: 44, height: 44, borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
-  },
-  commentSendBtnDisabled: { backgroundColor: '#93c5fd' },
+  commentInput: { flex: 1, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, ...TYPOGRAPHY.body, maxHeight: 100 },
+  commentSendBtn: { width: 44, height: 44, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', justifyContent: 'center' },
 
-  noComments: { ...TYPOGRAPHY.body, color: COLORS.textMuted, textAlign: 'center', paddingVertical: SPACING.xl },
+  noComments: { ...TYPOGRAPHY.body, textAlign: 'center', paddingVertical: SPACING.xl },
 
-  commentCard: {
-    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.sm,
-    ...SHADOWS.subtle,
-  },
+  commentCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.subtle },
   commentHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   commentAvatar: { width: 24, height: 24, borderRadius: 12 },
-  commentAvatarPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  commentAuthor: { ...TYPOGRAPHY.caption, fontWeight: '800', color: COLORS.textSecondary, flex: 1 },
-  commentDate: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, fontWeight: '600' },
-  commentBody: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, lineHeight: 21 },
+  commentAvatarPlaceholder: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  commentAuthor: { ...TYPOGRAPHY.caption, fontWeight: '800', flex: 1 },
+  commentDate: { ...TYPOGRAPHY.microLabel, fontWeight: '600' },
+  commentBody: { ...TYPOGRAPHY.body, lineHeight: 21 },
 });
