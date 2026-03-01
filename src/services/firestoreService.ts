@@ -111,10 +111,10 @@ export const firestoreService = {
       upvoteCount: increment(isAdding ? 1 : -1)
     });
 
-    // Track the upvote record
+    // Track the upvote record in 'upvotes' collection
     const upvoteRef = doc(db, 'upvotes', `${issueId}_${userId}`);
     if (isAdding) {
-      await setDoc(upvoteRef, { issueId, userId, createdAt: new Date().toISOString() });
+      await setDoc(upvoteRef, { issueId, userId });
     } else {
       await deleteDoc(upvoteRef);
     }
@@ -125,6 +125,7 @@ export const firestoreService = {
       hidden: true,
       deletedAt: new Date().toISOString(),
       deletedByName: adminName,
+      updatedAt: new Date().toISOString()
     });
   },
 
@@ -179,6 +180,7 @@ export const firestoreService = {
 
   getNotifications: async (userId: string): Promise<Notification[]> => {
     try {
+      // Requires composite index on (userId ASC, createdAt DESC)
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
@@ -241,7 +243,7 @@ export const firestoreService = {
 
   logLogin: async (record: Omit<LoginRecord, 'id'>): Promise<void> => {
     try {
-      await addDoc(collection(db, 'loginRecords'), record);
+      await addDoc(collection(db, 'logins'), record);
     } catch (e) {
       console.warn('logLogin failed:', e);
     }

@@ -11,7 +11,6 @@ export interface User {
   photoURL?: string;
   createdAt: string;
   lastLoginAt: string;
-  isBanned: boolean;
   neighborhood?: string;
   notifsEnabled?: boolean;
 }

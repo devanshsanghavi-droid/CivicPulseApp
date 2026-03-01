@@ -71,7 +71,6 @@ export const signInWithGoogle = async (): Promise<User> => {
       photoURL,
       createdAt: now,
       lastLoginAt: now,
-      isBanned: false,
       notifsEnabled: true,
     });
 
@@ -171,7 +170,6 @@ export const convertFirebaseUserToAppUser = async (
     photoURL,
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
-    isBanned: false,
     notifsEnabled: true,
   });
 };
