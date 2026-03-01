@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Image, SafeAreaView
+  StyleSheet, ActivityIndicator, Image, SafeAreaView, RefreshControl, ScrollView, KeyboardAvoidingView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -11,13 +11,14 @@ import { firestoreService } from '../services/firestoreService';
 import { Issue } from '../types';
 import { CATEGORIES } from '../constants';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  open: { bg: '#fee2e2', text: '#b91c1c' },
-  acknowledged: { bg: '#fef9c3', text: '#a16207' },
-  resolved: { bg: '#dcfce7', text: '#15803d' },
+  open: { bg: '#fee2e2', text: '#dc2626' },
+  acknowledged: { bg: '#fef3c7', text: '#d97706' },
+  resolved: { bg: '#dcfce7', text: '#16a34a' },
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -51,8 +52,8 @@ const IssueCard = ({ issue, onPress }: { issue: Issue; onPress: () => void }) =>
             {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </Text>
         </View>
-        <Text style={styles.cardTitle}>{issue.title}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>{issue.description}</Text>
+        <Text style={styles.cardTitle} numberOfLines={2}>{issue.title || 'Untitled Issue'}</Text>
+        <Text style={styles.cardDesc} numberOfLines={2}>{issue.description || 'No description available'}</Text>
 
         <View style={styles.cardFooter}>
           <View style={styles.cardAuthor}>
@@ -66,7 +67,7 @@ const IssueCard = ({ issue, onPress }: { issue: Issue; onPress: () => void }) =>
             <Text style={styles.authorName} numberOfLines={1}>{issue.creatorName}</Text>
           </View>
           <View style={styles.upvoteRow}>
-            <Ionicons name="thumbsup" size={14} color="#2563eb" />
+            <Ionicons name="thumbs-up" size={14} color="#2563eb" />
             <Text style={styles.upvoteCount}>{issue.upvoteCount}</Text>
           </View>
         </View>
@@ -82,6 +83,7 @@ export default function FeedScreen() {
   const [filterCat, setFilterCat] = useState<string | undefined>();
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadIssues = useCallback(async () => {
     setLoading(true);
@@ -99,40 +101,49 @@ export default function FeedScreen() {
     }
   }, [sort, filterCat, search]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadIssues();
+    setRefreshing(false);
+  }, [loadIssues]);
+
   useEffect(() => { loadIssues(); }, [loadIssues]);
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Search */}
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={18} color="#9ca3af" style={styles.searchIcon} />
+      <KeyboardAvoidingView behavior="padding" style={styles.container}>
+        {/* Search */}
+        <View style={styles.searchRow}>
+        <Ionicons name="search" size={18} color={COLORS.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search city issues..."
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={COLORS.textMuted}
           value={search}
           onChangeText={setSearch}
         />
       </View>
 
-      {/* Category Filter */}
-      <FlatList
-        horizontal
-        data={[{ id: undefined, name: 'All Reports' }, ...CATEGORIES]}
-        keyExtractor={(item) => item.id || 'all'}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterList}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterChip, filterCat === item.id && styles.filterChipActive]}
-            onPress={() => setFilterCat(item.id)}
-          >
-            <Text style={[styles.filterChipText, filterCat === item.id && styles.filterChipTextActive]}>
-              {item.name}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      {/* Category Filter - Horizontally Scrollable */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {[{ id: undefined, name: 'All Reports' }, ...CATEGORIES].map(item => (
+            <TouchableOpacity
+              key={item.id || 'all'}
+              style={[styles.filterChip, filterCat === item.id && styles.filterChipActive]}
+              onPress={() => setFilterCat(item.id)}
+            >
+              <Text style={[styles.filterChipText, filterCat === item.id && styles.filterChipTextActive]}>
+                {item.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Sort Row */}
       <View style={styles.sortRow}>
@@ -169,6 +180,14 @@ export default function FeedScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
           renderItem={({ item }) => (
             <IssueCard
               issue={item}
@@ -177,74 +196,81 @@ export default function FeedScreen() {
           )}
         />
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#ffffff', borderRadius: 14,
-    marginHorizontal: 16, marginTop: 12, marginBottom: 8,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.lg, marginTop: SPACING.md, marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 15, color: '#111827' },
+  searchIcon: { marginRight: SPACING.sm },
+  searchInput: { flex: 1, ...TYPOGRAPHY.body, fontSize: 15, color: COLORS.textPrimary },
 
-  filterList: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  filterContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+  },
+  filterScroll: { 
+    gap: SPACING.sm,
+  },
   filterChip: {
-    paddingHorizontal: 16, paddingVertical: 7,
-    borderRadius: 100, backgroundColor: '#ffffff',
+    paddingHorizontal: SPACING.lg, paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.round, backgroundColor: COLORS.cardBackground,
     borderWidth: 1, borderColor: '#e5e7eb',
   },
-  filterChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  filterChipText: { fontSize: 12, fontWeight: '700', color: '#6b7280' },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterChipText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary },
   filterChipTextActive: { color: '#ffffff' },
 
   sortRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 8,
+    paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm,
   },
-  sortCount: { fontSize: 11, fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 },
+  sortCount: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted },
   sortBtns: { flexDirection: 'row', gap: 4 },
-  sortBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  sortBtnActive: { backgroundColor: '#eff6ff' },
-  sortBtnText: { fontSize: 11, fontWeight: '700', color: '#9ca3af' },
-  sortBtnTextActive: { color: '#2563eb' },
+  sortBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: BORDER_RADIUS.sm },
+  sortBtnActive: { backgroundColor: COLORS.primaryLight },
+  sortBtnText: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted },
+  sortBtnTextActive: { color: COLORS.primary },
 
-  list: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  list: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl, gap: SPACING.md },
 
   card: {
-    backgroundColor: '#ffffff', borderRadius: 20,
-    borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.border,
     overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.05,
-    shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+    ...SHADOWS.subtle,
   },
   cardImageWrap: { height: 180, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
   cardImageBadge: { position: 'absolute', top: 12, left: 12 },
   cardBody: { padding: 16 },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  cardCategory: { fontSize: 10, fontWeight: '900', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 1, flex: 1 },
-  cardDate: { fontSize: 10, fontWeight: '700', color: '#9ca3af' },
-  cardTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 6, lineHeight: 24 },
-  cardDesc: { fontSize: 13, color: '#6b7280', lineHeight: 20, marginBottom: 14 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  cardCategory: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, flex: 1 },
+  cardDate: { ...TYPOGRAPHY.caption, color: COLORS.textMuted },
+  cardTitle: { ...TYPOGRAPHY.cardTitle, color: COLORS.textPrimary, marginBottom: 6, lineHeight: 24 },
+  cardDesc: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginBottom: 14 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#f9fafb', paddingTop: 12 },
-  cardAuthor: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardAuthor: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   avatar: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  avatarPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
-  authorName: { fontSize: 12, fontWeight: '700', color: '#4b5563', maxWidth: 120 },
+  avatarPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  authorName: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary, maxWidth: 120 },
   upvoteRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  upvoteCount: { fontSize: 14, fontWeight: '900', color: '#111827' },
+  upvoteCount: { ...TYPOGRAPHY.body, fontSize: 14, fontWeight: '900', color: COLORS.textPrimary },
 
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100 },
-  badgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.round },
+  badgeText: { ...TYPOGRAPHY.microLabel, letterSpacing: 0.5 },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText: { fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 2 },
-  emptyText: { fontSize: 11, fontWeight: '800', color: '#d1d5db', letterSpacing: 1.5 },
+  loadingText: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, letterSpacing: 2 },
+  emptyText: { ...TYPOGRAPHY.microLabel, color: '#d1d5db', letterSpacing: 1.5 },
 });

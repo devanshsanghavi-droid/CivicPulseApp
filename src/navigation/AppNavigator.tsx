@@ -25,7 +25,7 @@ import LocationExplanationScreen from '../screens/LocationExplanationScreen';
 // Type definitions for navigation
 export type RootStackParamList = {
   Landing: undefined;
-  Main: undefined;
+  Main: { screen?: 'Feed' | 'Map' | 'Report' | 'Profile' | 'Admin' };
   Login: undefined;
   IssueDetail: { issueId: string };
   LocationExplanation: { pendingScreen: 'Map' | 'Report' };

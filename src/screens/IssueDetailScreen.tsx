@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, TextInput, ActivityIndicator,
-  Alert, SafeAreaView
+  Alert, SafeAreaView, KeyboardAvoidingView
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,13 +13,14 @@ import { Issue, Comment } from '../types';
 import { CATEGORIES } from '../constants';
 import { useApp } from '../context/AppContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type RouteType = RouteProp<RootStackParamList, 'IssueDetail'>;
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  open: { bg: '#fee2e2', text: '#b91c1c' },
-  acknowledged: { bg: '#fef9c3', text: '#a16207' },
-  resolved: { bg: '#dcfce7', text: '#15803d' },
+  open: { bg: '#fee2e2', text: '#dc2626' },
+  acknowledged: { bg: '#fef3c7', text: '#d97706' },
+  resolved: { bg: '#dcfce7', text: '#16a34a' },
 };
 
 export default function IssueDetailScreen() {
@@ -114,15 +115,27 @@ export default function IssueDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior="padding" style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Photos */}
+        {/* Photos with Page Indicators */}
         {issue.photos.length > 0 && (
-          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-            {issue.photos.map(photo => (
-              <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
-            ))}
-          </ScrollView>
+          <View style={styles.photoContainer}>
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+              {issue.photos.map((photo, index) => (
+                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
+              ))}
+            </ScrollView>
+            {/* Page Indicators */}
+            <View style={styles.pageIndicators}>
+              {issue.photos.map((_, index) => (
+                <View
+                  key={index}
+                  style={[styles.pageDot, styles.currentPageDot]}
+                />
+              ))}
+            </View>
+          </View>
         )}
 
         <View style={styles.body}>
@@ -169,7 +182,7 @@ export default function IssueDetailScreen() {
             </View>
           )}
 
-          {/* Upvote */}
+          {/* Upvote Button */}
           <TouchableOpacity
             style={[styles.upvoteBtn, hasUpvoted && styles.upvoteBtnActive]}
             onPress={handleUpvote}
@@ -177,13 +190,15 @@ export default function IssueDetailScreen() {
             activeOpacity={0.8}
           >
             {upvoting ? (
-              <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : '#2563eb'} />
+              <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : COLORS.primary} />
             ) : (
-              <Ionicons name={hasUpvoted ? "thumbsup" : "thumbsup-outline"} size={18} color={hasUpvoted ? '#ffffff' : '#2563eb'} />
+              <>
+                <Ionicons name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"} size={18} color={hasUpvoted ? '#ffffff' : COLORS.primary} />
+                <Text style={[styles.upvoteBtnText, hasUpvoted && styles.upvoteBtnTextActive]}>
+                  {issue.upvoteCount} {issue.upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
+                </Text>
+              </>
             )}
-            <Text style={[styles.upvoteBtnText, hasUpvoted && styles.upvoteBtnTextActive]}>
-              {issue.upvoteCount} {issue.upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
-            </Text>
           </TouchableOpacity>
 
           {/* Comments */}
@@ -236,79 +251,101 @@ export default function IssueDetailScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
   scroll: { paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: '#9ca3af', fontWeight: '700' },
+  errorText: { ...TYPOGRAPHY.body, color: COLORS.textMuted, fontWeight: '700' },
 
+  // Photo Gallery
+  photoContainer: { marginBottom: SPACING.lg },
   photoScroll: { height: 240 },
   photo: { width: 400, height: 240, resizeMode: 'cover' },
+  pageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  pageDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.border,
+  },
+  currentPageDot: {
+    backgroundColor: COLORS.primary,
+  },
 
-  body: { padding: 20 },
+  body: { padding: SPACING.lg },
 
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  category: { fontSize: 11, fontWeight: '900', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 1, flex: 1 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 100 },
-  statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  category: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, flex: 1 },
+  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.round },
+  statusText: { ...TYPOGRAPHY.microLabel, letterSpacing: 1 },
 
-  title: { fontSize: 24, fontWeight: '900', color: '#111827', letterSpacing: -0.5, marginBottom: 12 },
-  description: { fontSize: 15, color: '#4b5563', lineHeight: 24, marginBottom: 16 },
+  title: { ...TYPOGRAPHY.cardTitle, fontSize: 24, color: COLORS.textPrimary, marginBottom: SPACING.md },
+  description: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, lineHeight: 24, marginBottom: SPACING.md },
 
   statusNote: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#eff6ff', borderRadius: 12, padding: 14, marginBottom: 16,
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
+    backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md,
+    borderLeftWidth: 4, borderLeftColor: COLORS.primary,
   },
-  statusNoteText: { fontSize: 13, color: '#1d4ed8', flex: 1, lineHeight: 20 },
+  statusNoteText: { ...TYPOGRAPHY.body, fontSize: 13, color: '#1d4ed8', flex: 1, lineHeight: 20 },
 
-  reporterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  reporterRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   reporterAvatar: { width: 28, height: 28, borderRadius: 14 },
-  reporterAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
-  reporterName: { fontSize: 13, fontWeight: '700', color: '#374151', flex: 1 },
-  reporterDate: { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
+  reporterAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  reporterName: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary, flex: 1 },
+  reporterDate: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600' },
 
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  locationText: { fontSize: 13, color: '#6b7280', flex: 1 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.xl },
+  locationText: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 
   upvoteBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 2, borderColor: '#2563eb', borderRadius: 14,
-    paddingVertical: 14, justifyContent: 'center', marginBottom: 28,
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    borderWidth: 2, borderColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.md, justifyContent: 'center', marginBottom: SPACING.xl,
   },
-  upvoteBtnActive: { backgroundColor: '#2563eb' },
-  upvoteBtnText: { fontSize: 15, fontWeight: '800', color: '#2563eb' },
+  upvoteBtnActive: { backgroundColor: COLORS.primary },
+  upvoteBtnText: { ...TYPOGRAPHY.body, fontSize: 15, fontWeight: '800', color: COLORS.primary },
   upvoteBtnTextActive: { color: '#ffffff' },
 
-  sectionLabel: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 3, marginBottom: 14 },
+  sectionLabel: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.md },
 
-  commentInputRow: { flexDirection: 'row', gap: 10, marginBottom: 16, alignItems: 'flex-end' },
+  commentInputRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md, alignItems: 'flex-end' },
   commentInput: {
-    flex: 1, backgroundColor: '#ffffff', borderRadius: 14,
-    borderWidth: 1, borderColor: '#e5e7eb',
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#111827', maxHeight: 100,
+    flex: 1, backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.body, color: COLORS.textPrimary, maxHeight: 100,
   },
   commentSendBtn: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
   },
   commentSendBtnDisabled: { backgroundColor: '#93c5fd' },
 
-  noComments: { fontSize: 13, color: '#9ca3af', textAlign: 'center', paddingVertical: 24 },
+  noComments: { ...TYPOGRAPHY.body, color: COLORS.textMuted, textAlign: 'center', paddingVertical: SPACING.xl },
 
   commentCard: {
-    backgroundColor: '#ffffff', borderRadius: 16,
-    borderWidth: 1, borderColor: '#f3f4f6',
-    padding: 14, marginBottom: 10,
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.md, marginBottom: SPACING.sm,
+    ...SHADOWS.subtle,
   },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   commentAvatar: { width: 24, height: 24, borderRadius: 12 },
-  commentAvatarPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
-  commentAuthor: { fontSize: 12, fontWeight: '800', color: '#374151', flex: 1 },
-  commentDate: { fontSize: 10, color: '#9ca3af', fontWeight: '600' },
-  commentBody: { fontSize: 14, color: '#4b5563', lineHeight: 21 },
+  commentAvatarPlaceholder: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  commentAuthor: { ...TYPOGRAPHY.caption, fontWeight: '800', color: COLORS.textSecondary, flex: 1 },
+  commentDate: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, fontWeight: '600' },
+  commentBody: { ...TYPOGRAPHY.body, color: COLORS.textSecondary, lineHeight: 21 },
 });

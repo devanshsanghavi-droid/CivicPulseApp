@@ -1,3 +1,4 @@
+import 'expo-dev-client';
 // App.tsx - Root entry point for React Native
 // Much simpler than the web version - all logic lives in AppContext and AppNavigator
 

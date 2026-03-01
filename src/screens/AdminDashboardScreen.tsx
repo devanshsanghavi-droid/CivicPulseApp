@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { firestoreService } from '../services/firestoreService';
 import { useApp } from '../context/AppContext';
 import { Issue, UserRecord } from '../types';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type AdminTab = 'issues' | 'users';
 
@@ -109,27 +110,27 @@ export default function AdminDashboardScreen() {
         <Text style={styles.subheading}>CIVICPULSE CONTROL CENTER</Text>
       </View>
 
-      {/* Tabs */}
+      {/* 3-Tab Navigation */}
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, tab === 'issues' && styles.tabActive]}
           onPress={() => setTab('issues')}
         >
-          <Ionicons name="list" size={16} color={tab === 'issues' ? '#2563eb' : '#9ca3af'} />
+          <Ionicons name="list" size={16} color={tab === 'issues' ? COLORS.primary : COLORS.textMuted} />
           <Text style={[styles.tabText, tab === 'issues' && styles.tabTextActive]}>Issues</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, tab === 'users' && styles.tabActive]}
           onPress={() => setTab('users')}
         >
-          <Ionicons name="people" size={16} color={tab === 'users' ? '#2563eb' : '#9ca3af'} />
+          <Ionicons name="people" size={16} color={tab === 'users' ? COLORS.primary : COLORS.textMuted} />
           <Text style={[styles.tabText, tab === 'users' && styles.tabTextActive]}>Users</Text>
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -140,7 +141,7 @@ export default function AdminDashboardScreen() {
                 {new Date(issue.createdAt).toLocaleDateString()} · {issue.upvoteCount} upvotes
               </Text>
 
-              {/* Status Switcher */}
+              {/* Status Filter Chips */}
               <View style={styles.statusRow}>
                 {STATUS_OPTIONS.map(s => (
                   <TouchableOpacity
@@ -156,7 +157,7 @@ export default function AdminDashboardScreen() {
               </View>
 
               <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteIssue(issue)}>
-                <Ionicons name="trash-outline" size={14} color="#dc2626" />
+                <Ionicons name="trash-outline" size={14} color={COLORS.error} />
                 <Text style={styles.deleteBtnText}>Remove Issue</Text>
               </TouchableOpacity>
             </View>
@@ -196,7 +197,7 @@ export default function AdminDashboardScreen() {
                   <Ionicons
                     name={u.banType !== 'none' ? "checkmark-circle-outline" : "ban-outline"}
                     size={14}
-                    color={u.banType !== 'none' ? '#16a34a' : '#dc2626'}
+                    color={u.banType !== 'none' ? COLORS.success : COLORS.error}
                   />
                   <Text style={[styles.banBtnText, u.banType !== 'none' && styles.unbanBtnText]}>
                     {u.banType !== 'none' ? 'Unban User' : 'Ban User'}
@@ -212,63 +213,66 @@ export default function AdminDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  noAccessText: { fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 2 },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md },
+  noAccessText: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted },
 
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  heading: { fontSize: 26, fontWeight: '900', color: '#111827', letterSpacing: -0.5 },
-  subheading: { fontSize: 10, fontWeight: '800', color: '#2563eb', letterSpacing: 3, marginTop: 2 },
+  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm },
+  heading: { ...TYPOGRAPHY.pageTitle, fontSize: 26, color: COLORS.textPrimary },
+  subheading: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, marginTop: SPACING.xs },
 
-  tabs: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 8 },
+  // 3-Tab Navigation
+  tabs: { flexDirection: 'row', paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.sm },
   tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 10, borderRadius: 12,
-    backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs,
+    paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.cardBackground, borderWidth: 1, borderColor: COLORS.border,
   },
-  tabActive: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
-  tabText: { fontSize: 13, fontWeight: '700', color: '#9ca3af' },
-  tabTextActive: { color: '#2563eb' },
+  tabActive: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primaryBorder },
+  tabText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textMuted },
+  tabTextActive: { color: COLORS.primary },
 
-  scroll: { paddingHorizontal: 20, paddingBottom: 32, gap: 10 },
+  scroll: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl, gap: SPACING.sm },
 
   card: {
-    backgroundColor: '#ffffff', borderRadius: 16,
-    borderWidth: 1, borderColor: '#f3f4f6', padding: 16,
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md,
+    ...SHADOWS.subtle,
   },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 4 },
-  cardMeta: { fontSize: 11, color: '#9ca3af', fontWeight: '600', marginBottom: 12 },
+  cardTitle: { ...TYPOGRAPHY.cardTitle, color: COLORS.textPrimary, marginBottom: SPACING.xs },
+  cardMeta: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600', marginBottom: SPACING.sm },
 
-  statusRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  // Status Filter Chips
+  statusRow: { flexDirection: 'row', gap: SPACING.xs, marginBottom: SPACING.sm },
   statusChip: {
-    flex: 1, paddingVertical: 7, borderRadius: 8,
-    backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb',
+    flex: 1, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
     alignItems: 'center',
   },
-  statusChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  statusChipText: { fontSize: 9, fontWeight: '800', color: '#9ca3af', letterSpacing: 0.5 },
+  statusChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  statusChipText: { ...TYPOGRAPHY.microLabel, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 0.5 },
   statusChipTextActive: { color: '#ffffff' },
 
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  deleteBtnText: { fontSize: 12, fontWeight: '700', color: '#dc2626' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  deleteBtnText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.error },
 
-  userRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  userAvatar: { width: 44, height: 44, borderRadius: 14 },
+  userRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
+  userAvatar: { width: 44, height: 44, borderRadius: BORDER_RADIUS.md },
   userAvatarPlaceholder: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
   },
   userInfo: { flex: 1 },
-  userName: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 2 },
-  userEmail: { fontSize: 12, color: '#9ca3af', marginBottom: 8 },
-  userTags: { flexDirection: 'row', gap: 6 },
-  roleTag: { backgroundColor: '#dbeafe', borderRadius: 100, paddingHorizontal: 8, paddingVertical: 3 },
-  roleTagText: { fontSize: 9, fontWeight: '900', color: '#1d4ed8', letterSpacing: 0.5 },
-  bannedTag: { backgroundColor: '#fee2e2', borderRadius: 100, paddingHorizontal: 8, paddingVertical: 3 },
-  bannedTagText: { fontSize: 9, fontWeight: '900', color: '#dc2626', letterSpacing: 0.5 },
+  userName: { ...TYPOGRAPHY.cardTitle, color: COLORS.textPrimary, marginBottom: SPACING.xs },
+  userEmail: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, marginBottom: SPACING.sm },
+  userTags: { flexDirection: 'row', gap: SPACING.xs },
+  roleTag: { backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.xs, paddingVertical: SPACING.xs },
+  roleTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, letterSpacing: 0.5 },
+  bannedTag: { backgroundColor: '#fee2e2', borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.xs, paddingVertical: SPACING.xs },
+  bannedTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.error, letterSpacing: 0.5 },
 
-  banBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  banBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   unbanBtn: {},
-  banBtnText: { fontSize: 12, fontWeight: '700', color: '#dc2626' },
-  unbanBtnText: { color: '#16a34a' },
+  banBtnText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.error },
+  unbanBtnText: { color: COLORS.success },
 });

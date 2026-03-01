@@ -9,6 +9,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -50,7 +51,7 @@ export default function LandingScreen() {
 
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => navigation.navigate('Main')}
+            onPress={() => navigation.navigate('Login')}
             activeOpacity={0.85}
           >
             <Text style={styles.primaryBtnText}>Browse Issues</Text>
@@ -104,7 +105,7 @@ export default function LandingScreen() {
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => navigation.navigate(user ? 'Main' : 'Login')}
+            onPress={() => navigation.navigate('Login')}
             activeOpacity={0.85}
           >
             <Text style={styles.primaryBtnText}>
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, color: '#2563eb', fontWeight: '600' },
   heroTitle: {
-    fontSize: 56, fontWeight: '900', color: '#2563eb',
+    fontSize: 64, fontWeight: '900', color: COLORS.primary,
     letterSpacing: -2, marginBottom: 16, textAlign: 'center',
   },
   heroSub: {
@@ -139,10 +140,9 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#2563eb', borderRadius: 14,
+    backgroundColor: COLORS.primary, borderRadius: 14,
     paddingHorizontal: 28, paddingVertical: 16,
-    shadowColor: '#2563eb', shadowOpacity: 0.3,
-    shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+    ...SHADOWS.colored(COLORS.primary),
     marginBottom: 12,
   },
   primaryBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
@@ -155,14 +155,13 @@ const styles = StyleSheet.create({
   // Features
   features: { paddingHorizontal: 16, gap: 12, marginBottom: 32 },
   featureCard: {
-    backgroundColor: '#ffffff', borderRadius: 24,
-    borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1, borderColor: COLORS.border,
     padding: 24, alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.04,
-    shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+    ...SHADOWS.subtle,
   },
   featureIcon: {
-    width: 56, height: 56, backgroundColor: '#eff6ff',
+    width: 56, height: 56, backgroundColor: COLORS.primaryLight,
     borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
   featureTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 8 },
@@ -171,12 +170,12 @@ const styles = StyleSheet.create({
   // Stats
   statsSection: {
     flexDirection: 'row', backgroundColor: '#f1f5f9',
-    marginHorizontal: 16, borderRadius: 20, padding: 24,
+    marginHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.xl, padding: SPACING.xxl,
     justifyContent: 'space-around', alignItems: 'center', marginBottom: 40,
   },
   statItem: { alignItems: 'center', flex: 1 },
-  statValue: { fontSize: 28, fontWeight: '900', color: '#2563eb', marginBottom: 4 },
-  statLabel: { fontSize: 9, fontWeight: '800', color: '#9ca3af', letterSpacing: 1.5, textAlign: 'center' },
+  statValue: { ...TYPOGRAPHY.pageTitle, fontSize: 28, color: COLORS.primary, marginBottom: 4 },
+  statLabel: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, textAlign: 'center' },
   statDivider: { width: 1, height: 40, backgroundColor: '#e2e8f0' },
 
   // CTA

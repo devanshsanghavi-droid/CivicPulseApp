@@ -39,3 +39,32 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase and Google Services
+GoogleService-Info.plist
+google-services.json
+firebase.json
+firebase-*.json
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+# Build artifacts
+build/
+*.tgz
+*.tar.gz

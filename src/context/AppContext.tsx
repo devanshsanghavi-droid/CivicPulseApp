@@ -10,7 +10,7 @@ import { onAuthStateChange, convertFirebaseUserToAppUser, configureGoogleSignIn 
 
 interface AppContextType {
   user: User | null;
-  setUser: (u: User | null) => void;
+  setUser: (u: User | null) => Promise<void>;
   isAdmin: boolean;
   notifs: Notification[];
   unreadCount: number;

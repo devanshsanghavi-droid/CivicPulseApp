@@ -12,6 +12,7 @@ import { firestoreService } from '../services/firestoreService';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -79,13 +80,13 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
+        {/* Header with Large Avatar */}
         <View style={styles.header}>
           {user.photoURL ? (
             <Image source={{ uri: user.photoURL }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color="#2563eb" />
+              <Ionicons name="person" size={40} color={COLORS.primary} />
             </View>
           )}
           <View style={styles.headerInfo}>
@@ -104,43 +105,48 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Stats */}
+        {/* Stats Grid */}
         <Text style={styles.sectionLabel}>ACTIVITY METRICS</Text>
-        <View style={styles.statsRow}>
+        <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.reportCount}</Text>
-            <Text style={styles.statLabel}>REPORTS LODGED</Text>
+            <Text style={styles.statLabel}>REPORTS LOGGED</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#16a34a' }]}>{stats.upvoteCount}</Text>
+            <Text style={[styles.statValue, { color: COLORS.success }]}>{stats.upvoteCount}</Text>
             <Text style={styles.statLabel}>COLLECTIVE VOTES</Text>
           </View>
         </View>
 
-        {/* Controls */}
+        {/* Settings with Chevrons */}
         <Text style={styles.sectionLabel}>ACCOUNT CONTROL</Text>
 
         {/* Notifications Toggle */}
-        <View style={styles.row}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="notifications-outline" size={20} color="#9ca3af" />
-            <Text style={styles.rowLabel}>Notification Preferences</Text>
+        <TouchableOpacity style={styles.settingRow} onPress={() => {}}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="notifications-outline" size={20} color={COLORS.textMuted} />
+            <Text style={styles.settingLabel}>Notification Preferences</Text>
           </View>
-          <Switch
-            value={!!user.notifsEnabled}
-            onValueChange={toggleNotifs}
-            trackColor={{ false: '#e5e7eb', true: '#2563eb' }}
-            thumbColor="#ffffff"
-          />
-        </View>
+          <View style={styles.settingRight}>
+            <Switch
+              value={!!user.notifsEnabled}
+              onValueChange={toggleNotifs}
+              trackColor={{ false: '#e5e7eb', true: COLORS.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
+        </TouchableOpacity>
 
         {/* Neighborhood */}
-        <TouchableOpacity style={styles.row} onPress={() => setShowNeighborhoods(!showNeighborhoods)}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="home-outline" size={20} color="#9ca3af" />
-            <Text style={styles.rowLabel}>Neighborhood Registry</Text>
+        <TouchableOpacity style={styles.settingRow} onPress={() => setShowNeighborhoods(!showNeighborhoods)}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="home-outline" size={20} color={COLORS.textMuted} />
+            <Text style={styles.settingLabel}>Neighborhood Registry</Text>
           </View>
-          <Text style={styles.rowValue}>{user.neighborhood || 'Select'}</Text>
+          <View style={styles.settingRight}>
+            <Text style={styles.settingValue}>{user.neighborhood || 'Select'}</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </View>
         </TouchableOpacity>
 
         {showNeighborhoods && (
@@ -160,17 +166,19 @@ export default function ProfileScreen() {
         )}
 
         {/* Report a Problem */}
-        <TouchableOpacity style={styles.row} onPress={reportProblem}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="warning-outline" size={20} color="#9ca3af" />
-            <Text style={styles.rowLabel}>Report a Problem</Text>
+        <TouchableOpacity style={styles.settingRow} onPress={reportProblem}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="warning-outline" size={20} color={COLORS.textMuted} />
+            <Text style={styles.settingLabel}>Report a Problem</Text>
           </View>
-          <Ionicons name="open-outline" size={16} color="#d1d5db" />
+          <View style={styles.settingRight}>
+            <Ionicons name="open-outline" size={16} color={COLORS.textMuted} />
+          </View>
         </TouchableOpacity>
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#dc2626" />
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
           <Text style={styles.logoutText}>TERMINATE SESSION</Text>
         </TouchableOpacity>
 
@@ -180,66 +188,105 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  scroll: { padding: 20, paddingBottom: 48 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
-  authRequired: { fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 2 },
-  signInBtn: { backgroundColor: '#2563eb', borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14 },
-  signInBtnText: { color: '#ffffff', fontWeight: '900', fontSize: 12, letterSpacing: 2 },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { padding: SPACING.lg, paddingBottom: 60 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.lg },
+  authRequired: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted },
+  signInBtn: { backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.xxxl, paddingVertical: SPACING.md },
+  signInBtnText: { ...TYPOGRAPHY.caption, color: '#ffffff', fontWeight: '900', letterSpacing: 2 },
 
-  header: { flexDirection: 'row', gap: 16, marginBottom: 32 },
-  avatar: { width: 80, height: 80, borderRadius: 24, borderWidth: 2, borderColor: '#dbeafe' },
+  header: { flexDirection: 'row', gap: SPACING.lg, marginBottom: SPACING.xxxl, alignItems: 'center' },
+  avatar: { width: 96, height: 96, borderRadius: BORDER_RADIUS.xxl, borderWidth: 2, borderColor: COLORS.primaryBorder },
   avatarPlaceholder: {
-    width: 80, height: 80, borderRadius: 24,
-    backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#dbeafe',
+    width: 96, height: 96, borderRadius: BORDER_RADIUS.xxl,
+    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: COLORS.primaryBorder,
   },
   headerInfo: { flex: 1, justifyContent: 'center' },
-  name: { fontSize: 22, fontWeight: '900', color: '#111827', marginBottom: 2 },
-  email: { fontSize: 13, color: '#9ca3af', fontWeight: '600', marginBottom: 10 },
-  tagRow: { flexDirection: 'row', gap: 8 },
-  roleTag: { backgroundColor: '#dbeafe', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
-  roleTagText: { fontSize: 9, fontWeight: '900', color: '#1d4ed8', letterSpacing: 1 },
-  neighborhoodTag: { backgroundColor: '#dcfce7', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
-  neighborhoodTagText: { fontSize: 9, fontWeight: '900', color: '#15803d', letterSpacing: 1 },
+  name: { ...TYPOGRAPHY.pageTitle, fontSize: 22, color: COLORS.textPrimary, marginBottom: SPACING.xs },
+  email: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600', marginBottom: SPACING.sm },
+  tagRow: { flexDirection: 'row', gap: SPACING.sm },
+  roleTag: { backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
+  roleTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.primary, letterSpacing: 1 },
+  neighborhoodTag: { backgroundColor: '#dcfce7', borderRadius: BORDER_RADIUS.round, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
+  neighborhoodTagText: { ...TYPOGRAPHY.microLabel, color: COLORS.success, letterSpacing: 1 },
 
-  sectionLabel: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 3, marginBottom: 12, marginTop: 8 },
+  sectionLabel: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.md, marginTop: SPACING.lg },
 
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  // Stats Grid (2-column layout)
+  statsGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
   statCard: {
-    flex: 1, backgroundColor: '#ffffff', borderRadius: 20,
-    borderWidth: 1, borderColor: '#f3f4f6', padding: 20, alignItems: 'center',
+    flex: 1, 
+    backgroundColor: COLORS.cardBackground, 
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    padding: SPACING.lg, 
+    alignItems: 'center',
+    ...SHADOWS.subtle,
   },
-  statValue: { fontSize: 28, fontWeight: '900', color: '#2563eb', marginBottom: 4 },
-  statLabel: { fontSize: 9, fontWeight: '800', color: '#9ca3af', letterSpacing: 1.5, textAlign: 'center' },
+  statValue: { ...TYPOGRAPHY.pageTitle, fontSize: 28, color: COLORS.primary, marginBottom: SPACING.xs },
+  statLabel: { ...TYPOGRAPHY.microLabel, color: COLORS.textMuted, textAlign: 'center' },
 
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#ffffff', borderRadius: 16,
-    borderWidth: 1, borderColor: '#f3f4f6',
-    paddingHorizontal: 18, paddingVertical: 16, marginBottom: 10,
+  // Settings Rows with Chevrons
+  settingRow: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.cardBackground, 
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, 
+    paddingVertical: SPACING.md, 
+    marginBottom: SPACING.sm,
   },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowLabel: { fontSize: 14, fontWeight: '700', color: '#374151' },
-  rowValue: { fontSize: 11, fontWeight: '800', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 1 },
+  settingLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: SPACING.sm,
+  },
+  settingLabel: { 
+    ...TYPOGRAPHY.body, 
+    fontWeight: '700', 
+    color: COLORS.textSecondary,
+  },
+  settingRight: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: SPACING.xs,
+  },
+  settingValue: { 
+    ...TYPOGRAPHY.caption, 
+    fontWeight: '800', 
+    color: COLORS.primary, 
+    textTransform: 'uppercase', 
+    letterSpacing: 1,
+  },
 
   neighborhoodGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    backgroundColor: '#eff6ff', borderRadius: 20, padding: 16, marginBottom: 10,
+    flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm,
+    backgroundColor: COLORS.primaryLight, borderRadius: BORDER_RADIUS.lg, 
+    padding: SPACING.md, marginBottom: SPACING.sm,
   },
   neighborhoodChip: {
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 12, backgroundColor: '#ffffff',
-    borderWidth: 1, borderColor: '#e5e7eb',
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBackground,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  neighborhoodChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  neighborhoodChipText: { fontSize: 13, fontWeight: '700', color: '#4b5563' },
+  neighborhoodChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  neighborhoodChipText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary },
   neighborhoodChipTextActive: { color: '#ffffff' },
 
   logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
-    borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, marginTop: 20,
+    borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING.lg, 
+    paddingVertical: SPACING.md, marginTop: SPACING.xl,
   },
-  logoutText: { fontSize: 13, fontWeight: '900', color: '#dc2626', letterSpacing: 2 },
+  logoutText: { ...TYPOGRAPHY.caption, fontWeight: '900', color: COLORS.error, letterSpacing: 2 },
 });

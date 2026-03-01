@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Alert, ActivityIndicator, SafeAreaView
+  ScrollView, Image, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -11,10 +11,12 @@ import { useApp } from '../context/AppContext';
 import { firestoreService } from '../services/firestoreService';
 import { CATEGORIES } from '../constants';
 import { useNavigation } from '@react-navigation/native';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 export default function ReportScreen() {
   const { user } = useApp();
   const navigation = useNavigation();
+  const [currentStep, setCurrentStep] = useState(1);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -133,179 +135,357 @@ export default function ReportScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>File a Report</Text>
-        <Text style={styles.subheading}>REPORT A CITY ISSUE</Text>
-
-        {/* Title */}
-        <View style={styles.field}>
-          <Text style={styles.label}>ISSUE TITLE</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Large pothole on Main St"
-            placeholderTextColor="#9ca3af"
-            value={title}
-            onChangeText={setTitle}
-            maxLength={80}
-          />
-        </View>
-
-        {/* Category */}
-        <View style={styles.field}>
-          <Text style={styles.label}>CATEGORY</Text>
-          <View style={styles.categoryGrid}>
-            {CATEGORIES.map(cat => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.categoryChip, categoryId === cat.id && styles.categoryChipActive]}
-                onPress={() => setCategoryId(cat.id)}
-              >
-                <Text style={[styles.categoryText, categoryId === cat.id && styles.categoryTextActive]}>
-                  {cat.name}
+      <KeyboardAvoidingView style={styles.container} behavior="padding">
+        {/* Step Indicator */}
+        <View style={styles.stepIndicator}>
+          {[1, 2, 3].map(step => (
+            <View key={step} style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep === step && styles.stepCircleActive]}>
+                <Text style={[styles.stepNumber, currentStep === step && styles.stepNumberActive]}>
+                  {step}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              </View>
+              {step < 3 && <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />}
+            </View>
+          ))}
         </View>
 
-        {/* Description */}
-        <View style={styles.field}>
-          <Text style={styles.label}>DESCRIPTION</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Describe the issue in detail..."
-            placeholderTextColor="#9ca3af"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {currentStep === 1 && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Add Photos</Text>
+              <Text style={styles.stepDescription}>Take photos or select from your library to document the issue.</Text>
+              
+              <View style={styles.photoGrid}>
+                {photos.map((uri, i) => (
+                  <View key={i} style={styles.photoThumb}>
+                    <Image source={{ uri }} style={styles.photoImg} />
+                    <TouchableOpacity
+                      style={styles.photoRemove}
+                      onPress={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {photos.length < 3 && (
+                  <>
+                    <TouchableOpacity style={styles.photoAddBtn} onPress={takePhoto}>
+                      <Ionicons name="camera" size={24} color={COLORS.primary} />
+                      <Text style={styles.photoAddText}>Camera</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.photoAddBtn} onPress={pickPhoto}>
+                      <Ionicons name="image" size={24} color={COLORS.primary} />
+                      <Text style={styles.photoAddText}>Library</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
 
-        {/* Location */}
-        <View style={styles.field}>
-          <Text style={styles.label}>LOCATION</Text>
-          <TouchableOpacity style={styles.locationBox} onPress={getLocation}>
-            {locLoading ? (
-              <ActivityIndicator size="small" color="#2563eb" />
+          {currentStep === 2 && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Issue Details</Text>
+              <Text style={styles.stepDescription}>Provide details about the issue you're reporting.</Text>
+              
+              <View style={styles.field}>
+                <Text style={styles.label}>ISSUE TITLE</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Large pothole on Main St"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={title}
+                  onChangeText={setTitle}
+                  maxLength={80}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>CATEGORY</Text>
+                <View style={styles.categoryGrid}>
+                  {CATEGORIES.map(cat => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.categoryChip, categoryId === cat.id && styles.categoryChipActive]}
+                      onPress={() => setCategoryId(cat.id)}
+                    >
+                      <Text style={[styles.categoryText, categoryId === cat.id && styles.categoryTextActive]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>DESCRIPTION</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Describe the issue in detail..."
+                  placeholderTextColor={COLORS.textMuted}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+          )}
+
+          {currentStep === 3 && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Location</Text>
+              <Text style={styles.stepDescription}>Confirm the location where this issue occurred.</Text>
+              
+              <View style={styles.field}>
+                <TouchableOpacity style={styles.locationBox} onPress={getLocation}>
+                  {locLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <Ionicons name={location ? "location" : "location-outline"} size={20} color={location ? COLORS.primary : COLORS.textMuted} />
+                  )}
+                  <Text style={[styles.locationText, !location && styles.locationPlaceholder]}>
+                    {location ? (address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`) : 'Tap to detect location'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {location && (
+                <View style={styles.mapPreview}>
+                  <Text style={styles.mapPreviewText}>Location detected</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Navigation Buttons */}
+        <View style={styles.navigationButtons}>
+          {currentStep > 1 && (
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => setCurrentStep(currentStep - 1)}
+            >
+              <Ionicons name="chevron-back" size={18} color={COLORS.textSecondary} />
+              <Text style={styles.backBtnText}>Back</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={[styles.nextBtn, currentStep === 3 && styles.submitBtn]}
+            onPress={currentStep === 3 ? handleSubmit : () => setCurrentStep(currentStep + 1)}
+            disabled={submitting}
+            activeOpacity={0.85}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Ionicons name={location ? "location" : "location-outline"} size={18} color={location ? "#2563eb" : "#9ca3af"} />
+              <>
+                <Ionicons name={currentStep === 3 ? "send" : "chevron-forward"} size={18} color="#ffffff" />
+                <Text style={styles.nextBtnText}>
+                  {currentStep === 3 ? 'SUBMIT REPORT' : 'Next'}
+                </Text>
+              </>
             )}
-            <Text style={[styles.locationText, !location && styles.locationPlaceholder]}>
-              {location ? (address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`) : 'Tap to detect location'}
-            </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Photos */}
-        <View style={styles.field}>
-          <Text style={styles.label}>PHOTOS (OPTIONAL)</Text>
-          <View style={styles.photoRow}>
-            {photos.map((uri, i) => (
-              <View key={i} style={styles.photoThumb}>
-                <Image source={{ uri }} style={styles.photoImg} />
-                <TouchableOpacity
-                  style={styles.photoRemove}
-                  onPress={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
-                >
-                  <Ionicons name="close-circle" size={20} color="#ef4444" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            {photos.length < 3 && (
-              <View style={styles.photoAddRow}>
-                <TouchableOpacity style={styles.photoAddBtn} onPress={takePhoto}>
-                  <Ionicons name="camera" size={22} color="#2563eb" />
-                  <Text style={styles.photoAddText}>Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.photoAddBtn} onPress={pickPhoto}>
-                  <Ionicons name="image" size={22} color="#2563eb" />
-                  <Text style={styles.photoAddText}>Library</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Submit */}
-        <TouchableOpacity
-          style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.85}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <>
-              <Ionicons name="send" size={18} color="#ffffff" />
-              <Text style={styles.submitBtnText}>SUBMIT REPORT</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  scroll: { padding: 20, paddingBottom: 48 },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
+  scroll: { padding: SPACING.lg, paddingBottom: 120 },
 
-  heading: { fontSize: 28, fontWeight: '900', color: '#111827', letterSpacing: -1, marginBottom: 2 },
-  subheading: { fontSize: 10, fontWeight: '800', color: '#2563eb', letterSpacing: 3, marginBottom: 24 },
+  // Step Indicator
+  stepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: COLORS.primary,
+  },
+  stepNumber: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
+  stepNumberActive: {
+    color: '#ffffff',
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SPACING.sm,
+  },
+  stepLineActive: {
+    backgroundColor: COLORS.primary,
+  },
 
-  field: { marginBottom: 24 },
-  label: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 2, marginBottom: 8 },
+  // Step Content
+  stepContent: {
+    paddingVertical: SPACING.lg,
+  },
+  stepTitle: {
+    ...TYPOGRAPHY.pageTitle,
+    fontSize: 24,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  stepDescription: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    lineHeight: 22,
+  },
+
+  // Form Fields
+  field: { marginBottom: SPACING.xl },
+  label: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.sm },
 
   input: {
-    backgroundColor: '#ffffff', borderRadius: 14,
-    borderWidth: 1, borderColor: '#e5e7eb',
-    paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: '#111827',
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.body, fontSize: 15, color: COLORS.textPrimary,
   },
-  textArea: { minHeight: 100, paddingTop: 14 },
+  textArea: { minHeight: 100, paddingTop: SPACING.md },
 
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   categoryChip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 100, backgroundColor: '#ffffff',
-    borderWidth: 1, borderColor: '#e5e7eb',
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.round, backgroundColor: COLORS.cardBackground,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  categoryChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  categoryText: { fontSize: 12, fontWeight: '700', color: '#6b7280' },
+  categoryChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  categoryText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary },
   categoryTextActive: { color: '#ffffff' },
 
   locationBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#ffffff', borderRadius: 14,
-    borderWidth: 1, borderColor: '#e5e7eb',
-    paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
   },
-  locationText: { fontSize: 14, color: '#111827', flex: 1 },
-  locationPlaceholder: { color: '#9ca3af' },
+  locationText: { ...TYPOGRAPHY.body, color: COLORS.textPrimary, flex: 1 },
+  locationPlaceholder: { color: COLORS.textMuted },
 
-  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photoThumb: { width: 90, height: 90, borderRadius: 12, position: 'relative' },
-  photoImg: { width: '100%', height: '100%', borderRadius: 12 },
+  // Photo Grid (2-column layout)
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    justifyContent: 'space-between',
+  },
+  photoThumb: { 
+    width: '48%', 
+    height: 120, 
+    borderRadius: BORDER_RADIUS.md, 
+    position: 'relative',
+    aspectRatio: 1,
+  },
+  photoImg: { width: '100%', height: '100%', borderRadius: BORDER_RADIUS.md },
   photoRemove: { position: 'absolute', top: -6, right: -6 },
-  photoAddRow: { flexDirection: 'row', gap: 10 },
   photoAddBtn: {
-    width: 90, height: 90, borderRadius: 12,
-    backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#bfdbfe',
-    borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4,
+    width: '48%', 
+    height: 120, 
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primaryLight, 
+    borderWidth: 2, 
+    borderColor: COLORS.primaryBorder,
+    borderStyle: 'dashed', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: SPACING.xs,
+    aspectRatio: 1,
   },
-  photoAddText: { fontSize: 10, fontWeight: '700', color: '#2563eb' },
+  photoAddText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.primary },
 
-  submitBtn: {
-    backgroundColor: '#2563eb', borderRadius: 16,
-    paddingVertical: 18, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: 10,
-    shadowColor: '#2563eb', shadowOpacity: 0.35,
-    shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
-    marginTop: 8,
+  // Map Preview
+  mapPreview: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginTop: SPACING.md,
   },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '900', letterSpacing: 2 },
+  mapPreviewText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
+  // Navigation Buttons
+  navigationButtons: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: SPACING.sm,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backBtnText: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  nextBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.md,
+    ...SHADOWS.colored(COLORS.primary),
+  },
+  submitBtn: {
+    backgroundColor: COLORS.success,
+    ...SHADOWS.colored(COLORS.success),
+  },
+  nextBtnText: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 1,
+  },
 });

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { signInWithGoogle } from '../services/firebaseAuth';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/designSystem';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -70,6 +71,12 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Environment Indicator */}
+        <View style={styles.environmentIndicator}>
+          <Text style={styles.environmentText}>Environment: Development</Text>
+          <Text style={styles.versionText}>v1.0.0</Text>
+        </View>
+
         <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.backBtn}>
           <Text style={styles.backBtnText}>RETURN TO HUB</Text>
         </TouchableOpacity>
@@ -79,7 +86,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#ffffff' },
+  safe: { flex: 1, backgroundColor: COLORS.cardBackground },
   container: {
     flex: 1,
     alignItems: 'center',
@@ -88,56 +95,45 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     width: 80, height: 80,
-    backgroundColor: '#2563eb',
+    backgroundColor: COLORS.primary,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    ...SHADOWS.colored(COLORS.primary),
   },
   appName: {
+    ...TYPOGRAPHY.pageTitle,
     fontSize: 36,
-    fontWeight: '900',
-    color: '#111827',
-    letterSpacing: -1,
+    color: COLORS.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#2563eb',
-    letterSpacing: 4,
+    ...TYPOGRAPHY.sectionLabel,
+    color: COLORS.primary,
     marginBottom: 40,
   },
   card: {
     width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 32,
-    padding: 32,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: BORDER_RADIUS.xxxl,
+    padding: SPACING.xxxl,
     borderWidth: 2,
-    borderColor: '#f3f4f6',
+    borderColor: COLORS.border,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 4 },
-    marginBottom: 32,
+    ...SHADOWS.medium,
+    marginBottom: SPACING.xxxl,
   },
   cardTitle: {
+    ...TYPOGRAPHY.cardTitle,
     fontSize: 20,
-    fontWeight: '900',
-    color: '#111827',
+    color: COLORS.textPrimary,
     marginBottom: 4,
   },
   cardSub: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#9ca3af',
-    letterSpacing: 3,
-    marginBottom: 32,
+    ...TYPOGRAPHY.microLabel,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xxxl,
   },
   googleBtn: {
     width: '100%',
@@ -145,10 +141,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.cardBackground,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    borderRadius: 100,
+    borderRadius: BORDER_RADIUS.round,
     paddingVertical: 14,
     paddingHorizontal: 24,
   },
@@ -166,15 +162,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   googleBtnText: {
+    ...TYPOGRAPHY.body,
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: COLORS.textSecondary,
   },
-  backBtn: { marginTop: 8 },
+  backBtn: { marginTop: SPACING.sm },
   backBtnText: {
-    fontSize: 10,
-    fontWeight: '800',
+    ...TYPOGRAPHY.microLabel,
     color: '#d1d5db',
-    letterSpacing: 3,
+  },
+  environmentIndicator: {
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  environmentText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  versionText: {
+    ...TYPOGRAPHY.microLabel,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
   },
 });
