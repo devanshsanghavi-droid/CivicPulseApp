@@ -27,6 +27,8 @@ import {
   IssueStatus,
   LoginRecord,
   UserRecord,
+  UserRole,
+  BanType,
   Notification,
   Report
 } from '../types';
@@ -295,5 +297,148 @@ export const firestoreService = {
     } catch {
       return [];
     }
+  },
+
+  // --- User-specific queries ---
+
+  getIssuesByUser: async (userId: string): Promise<Issue[]> => {
+    try {
+      const q = query(collection(db, 'issues'), where('createdBy', '==', userId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as Issue))
+        .filter(i => !i.hidden)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch {
+      return [];
+    }
+  },
+
+  getCommentsByUser: async (userId: string): Promise<Comment[]> => {
+    try {
+      const q = query(collection(db, 'comments'), where('userId', '==', userId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as Comment))
+        .filter(c => !c.hidden)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch {
+      return [];
+    }
+  },
+
+  // --- Deleted items (admin) ---
+
+  getDeletedIssues: async (): Promise<Issue[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'issues'));
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as Issue))
+        .filter(i => i.hidden)
+        .sort((a, b) => new Date(b.deletedAt || b.updatedAt).getTime() - new Date(a.deletedAt || a.updatedAt).getTime());
+    } catch {
+      return [];
+    }
+  },
+
+  getDeletedComments: async (): Promise<Comment[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'comments'));
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as Comment))
+        .filter(c => c.hidden)
+        .sort((a, b) => new Date(b.deletedAt || b.updatedAt).getTime() - new Date(a.deletedAt || a.updatedAt).getTime());
+    } catch {
+      return [];
+    }
+  },
+
+  restoreIssue: async (id: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), {
+      hidden: false,
+      deletedAt: '',
+      deletedByName: '',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  restoreComment: async (id: string): Promise<void> => {
+    await updateDoc(doc(db, 'comments', id), {
+      hidden: false,
+      deletedAt: '',
+      deletedByName: '',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  // --- Login history (admin) ---
+
+  getLoginHistory: async (max: number = 50): Promise<LoginRecord[]> => {
+    try {
+      const snapshot = await getDocs(collection(db, 'logins'));
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as LoginRecord))
+        .sort((a, b) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime())
+        .slice(0, max);
+    } catch {
+      return [];
+    }
+  },
+
+  // --- Ban management (admin) ---
+
+  getBannedUsers: async (): Promise<UserRecord[]> => {
+    try {
+      const q = query(collection(db, 'users'), where('banType', 'in', ['temporary', 'permanent']));
+      const snapshot = await getDocs(q);
+      const bannedUsers: UserRecord[] = [];
+      const now = new Date();
+
+      for (const d of snapshot.docs) {
+        const rec = { id: d.id, ...d.data() } as UserRecord;
+        // Auto-unban expired temp bans
+        if (rec.banType === 'temporary' && rec.bannedUntil && new Date(rec.bannedUntil) <= now) {
+          await updateDoc(doc(db, 'users', rec.id), {
+            banType: 'none', bannedAt: '', bannedUntil: '', banReason: ''
+          });
+          continue;
+        }
+        bannedUsers.push(rec);
+      }
+      return bannedUsers;
+    } catch {
+      return [];
+    }
+  },
+
+  banUser: async (userId: string, banType: 'temporary' | 'permanent', reason?: string, durationHours?: number): Promise<void> => {
+    const now = new Date();
+    const updates: Record<string, any> = {
+      banType,
+      bannedAt: now.toISOString(),
+      banReason: reason || ''
+    };
+    if (banType === 'temporary' && durationHours) {
+      const expiry = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+      updates.bannedUntil = expiry.toISOString();
+    } else if (banType === 'permanent') {
+      updates.bannedUntil = '';
+    }
+    await updateDoc(doc(db, 'users', userId), updates);
+  },
+
+  unbanUser: async (userId: string): Promise<void> => {
+    await updateDoc(doc(db, 'users', userId), {
+      banType: 'none',
+      bannedAt: '',
+      bannedUntil: '',
+      banReason: ''
+    });
+  },
+
+  // --- Role management (super_admin only) ---
+
+  setUserRole: async (userId: string, role: UserRole): Promise<void> => {
+    await updateDoc(doc(db, 'users', userId), { role });
   }
 };

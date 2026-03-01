@@ -1,12 +1,14 @@
 // src/screens/IssueDetailScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, TextInput, ActivityIndicator,
-  Alert, SafeAreaView, KeyboardAvoidingView
+  Alert, SafeAreaView, KeyboardAvoidingView, Platform,
+  Dimensions, NativeSyntheticEvent, NativeScrollEvent
 } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps';
 import { firestoreService } from '../services/firestoreService';
 import { storageService } from '../services/storage';
 import { Issue, Comment } from '../types';
@@ -17,15 +19,18 @@ import { COLORS, TYPOGRAPHY, SHADOWS, BORDER_RADIUS, SPACING } from '../styles/d
 
 type RouteType = RouteProp<RootStackParamList, 'IssueDetail'>;
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  open: { bg: '#fee2e2', text: '#dc2626' },
-  acknowledged: { bg: '#fef3c7', text: '#d97706' },
-  resolved: { bg: '#dcfce7', text: '#16a34a' },
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const STATUS_COLORS: Record<string, { bg: string; text: string; marker: string }> = {
+  open: { bg: '#fee2e2', text: '#dc2626', marker: '#2563eb' },
+  acknowledged: { bg: '#fef3c7', text: '#d97706', marker: '#d97706' },
+  resolved: { bg: '#dcfce7', text: '#16a34a', marker: '#16a34a' },
 };
 
 export default function IssueDetailScreen() {
   const { user } = useApp();
   const route = useRoute<RouteType>();
+  const navigation = useNavigation<any>();
   const { issueId } = route.params;
 
   const [issue, setIssue] = useState<Issue | null>(null);
@@ -35,6 +40,7 @@ export default function IssueDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [commenting, setCommenting] = useState(false);
   const [upvoting, setUpvoting] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -94,6 +100,19 @@ export default function IssueDetailScreen() {
     }
   };
 
+  const handlePhotoScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setActivePhotoIndex(index);
+  };
+
+  const handleExpandMap = () => {
+    if (!issue) return;
+    navigation.navigate('Main', {
+      screen: 'Map',
+      params: { focusIssueId: issue.id, latitude: issue.latitude, longitude: issue.longitude }
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -115,96 +134,177 @@ export default function IssueDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior="padding" style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
 
-        {/* Photos with Page Indicators */}
-        {issue.photos.length > 0 && (
-          <View style={styles.photoContainer}>
-            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-              {issue.photos.map((photo, index) => (
-                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
-              ))}
-            </ScrollView>
-            {/* Page Indicators */}
-            <View style={styles.pageIndicators}>
-              {issue.photos.map((_, index) => (
-                <View
-                  key={index}
-                  style={[styles.pageDot, styles.currentPageDot]}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.body}>
-          {/* Category + Status */}
-          <View style={styles.metaRow}>
-            <Text style={styles.category}>{category?.name}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-              <Text style={[styles.statusText, { color: statusColors.text }]}>
-                {issue.status.toUpperCase()}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.title}>{issue.title}</Text>
-          <Text style={styles.description}>{issue.description}</Text>
-
-          {issue.statusNote && (
-            <View style={styles.statusNote}>
-              <Ionicons name="information-circle" size={16} color="#2563eb" />
-              <Text style={styles.statusNoteText}>{issue.statusNote}</Text>
+          {/* Photos with Dot Indicators */}
+          {issue.photos.length > 0 && (
+            <View style={styles.photoContainer}>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.photoScroll}
+                onScroll={handlePhotoScroll}
+                scrollEventThrottle={16}
+              >
+                {issue.photos.map((photo, index) => (
+                  <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
+                ))}
+              </ScrollView>
+              {/* Dot Indicators */}
+              {issue.photos.length > 1 && (
+                <View style={styles.pageIndicators}>
+                  {issue.photos.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.pageDot,
+                        activePhotoIndex === index ? styles.activeDot : styles.inactiveDot,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
-          {/* Reporter + Date */}
-          <View style={styles.reporterRow}>
-            {issue.creatorPhotoURL ? (
-              <Image source={{ uri: issue.creatorPhotoURL }} style={styles.reporterAvatar} />
-            ) : (
-              <View style={styles.reporterAvatarPlaceholder}>
-                <Ionicons name="person" size={14} color="#9ca3af" />
+          <View style={styles.body}>
+            {/* Category + Status */}
+            <View style={styles.metaRow}>
+              <Text style={styles.category}>{category?.name}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+                <Text style={[styles.statusText, { color: statusColors.text }]}>
+                  {issue.status.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.title}>{issue.title}</Text>
+            <Text style={styles.description}>{issue.description}</Text>
+
+            {issue.statusNote && (
+              <View style={styles.statusNote}>
+                <Ionicons name="information-circle" size={16} color="#2563eb" />
+                <Text style={styles.statusNoteText}>{issue.statusNote}</Text>
               </View>
             )}
-            <Text style={styles.reporterName}>{issue.creatorName}</Text>
-            <Text style={styles.reporterDate}>
-              {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
-            </Text>
-          </View>
 
-          {/* Location */}
-          {issue.address && (
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={14} color="#2563eb" />
-              <Text style={styles.locationText}>{issue.address}</Text>
+            {/* Reporter + Date */}
+            <View style={styles.reporterRow}>
+              {issue.creatorPhotoURL ? (
+                <Image source={{ uri: issue.creatorPhotoURL }} style={styles.reporterAvatar} />
+              ) : (
+                <View style={styles.reporterAvatarPlaceholder}>
+                  <Ionicons name="person" size={14} color="#9ca3af" />
+                </View>
+              )}
+              <Text style={styles.reporterName}>{issue.creatorName}</Text>
+              <Text style={styles.reporterDate}>
+                {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Text>
             </View>
-          )}
 
-          {/* Upvote Button */}
-          <TouchableOpacity
-            style={[styles.upvoteBtn, hasUpvoted && styles.upvoteBtnActive]}
-            onPress={handleUpvote}
-            disabled={!user || upvoting}
-            activeOpacity={0.8}
-          >
-            {upvoting ? (
-              <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : COLORS.primary} />
-            ) : (
-              <>
-                <Ionicons name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"} size={18} color={hasUpvoted ? '#ffffff' : COLORS.primary} />
-                <Text style={[styles.upvoteBtnText, hasUpvoted && styles.upvoteBtnTextActive]}>
-                  {issue.upvoteCount} {issue.upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
-                </Text>
-              </>
+            {/* Map Preview */}
+            {issue.latitude != null && issue.longitude != null && (
+              <View style={styles.mapSection}>
+                <MapView
+                  style={styles.mapPreview}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                  initialRegion={{
+                    latitude: issue.latitude,
+                    longitude: issue.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                  }}
+                >
+                  <Marker
+                    coordinate={{ latitude: issue.latitude, longitude: issue.longitude }}
+                    pinColor={statusColors.marker}
+                  />
+                </MapView>
+                {issue.address && (
+                  <View style={styles.locationRow}>
+                    <Ionicons name="location" size={14} color="#2563eb" />
+                    <Text style={styles.locationText}>{issue.address}</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={styles.expandMapBtn} onPress={handleExpandMap} activeOpacity={0.8}>
+                  <Ionicons name="expand-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.expandMapText}>Expand Map</Text>
+                </TouchableOpacity>
+              </View>
             )}
-          </TouchableOpacity>
 
-          {/* Comments */}
-          <Text style={styles.sectionLabel}>COMMUNITY DISCUSSION</Text>
+            {/* Location text only (no map) */}
+            {(issue.latitude == null || issue.longitude == null) && issue.address && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color="#2563eb" />
+                <Text style={styles.locationText}>{issue.address}</Text>
+              </View>
+            )}
 
-          {user && (
+            {/* Upvote Button */}
+            <TouchableOpacity
+              style={[styles.upvoteBtn, hasUpvoted && styles.upvoteBtnActive]}
+              onPress={handleUpvote}
+              disabled={!user || upvoting}
+              activeOpacity={0.8}
+            >
+              {upvoting ? (
+                <ActivityIndicator size="small" color={hasUpvoted ? '#ffffff' : COLORS.primary} />
+              ) : (
+                <>
+                  <Ionicons name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"} size={18} color={hasUpvoted ? '#ffffff' : COLORS.primary} />
+                  <Text style={[styles.upvoteBtnText, hasUpvoted && styles.upvoteBtnTextActive]}>
+                    {issue.upvoteCount} {issue.upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Comments */}
+            <Text style={styles.sectionLabel}>COMMUNITY DISCUSSION</Text>
+
+            {comments.length === 0 ? (
+              <Text style={styles.noComments}>No comments yet. Be the first!</Text>
+            ) : (
+              comments.map(comment => (
+                <View key={comment.id} style={styles.commentCard}>
+                  <View style={styles.commentHeader}>
+                    {comment.userPhotoURL ? (
+                      <Image source={{ uri: comment.userPhotoURL }} style={styles.commentAvatar} />
+                    ) : (
+                      <View style={styles.commentAvatarPlaceholder}>
+                        <Ionicons name="person" size={12} color="#9ca3af" />
+                      </View>
+                    )}
+                    <Text style={styles.commentAuthor}>{comment.userName}</Text>
+                    <Text style={styles.commentDate}>
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <Text style={styles.commentBody}>{comment.body}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Sticky Comment Footer */}
+        {user && (
+          <View style={styles.commentFooter}>
             <View style={styles.commentInputRow}>
               <TextInput
                 style={styles.commentInput}
@@ -225,32 +325,8 @@ export default function IssueDetailScreen() {
                 }
               </TouchableOpacity>
             </View>
-          )}
-
-          {comments.length === 0 ? (
-            <Text style={styles.noComments}>No comments yet. Be the first!</Text>
-          ) : (
-            comments.map(comment => (
-              <View key={comment.id} style={styles.commentCard}>
-                <View style={styles.commentHeader}>
-                  {comment.userPhotoURL ? (
-                    <Image source={{ uri: comment.userPhotoURL }} style={styles.commentAvatar} />
-                  ) : (
-                    <View style={styles.commentAvatarPlaceholder}>
-                      <Ionicons name="person" size={12} color="#9ca3af" />
-                    </View>
-                  )}
-                  <Text style={styles.commentAuthor}>{comment.userName}</Text>
-                  <Text style={styles.commentDate}>
-                    {new Date(comment.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.commentBody}>{comment.body}</Text>
-              </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -259,14 +335,14 @@ export default function IssueDetailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1 },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { ...TYPOGRAPHY.body, color: COLORS.textMuted, fontWeight: '700' },
 
   // Photo Gallery
   photoContainer: { marginBottom: SPACING.lg },
   photoScroll: { height: 240 },
-  photo: { width: 400, height: 240, resizeMode: 'cover' },
+  photo: { width: SCREEN_WIDTH, height: 240, resizeMode: 'cover' },
   pageIndicators: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -275,13 +351,16 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   pageDot: {
-    width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.border,
   },
-  currentPageDot: {
-    backgroundColor: COLORS.primary,
+  activeDot: {
+    width: 20,
+    backgroundColor: '#2563eb',
+  },
+  inactiveDot: {
+    width: 8,
+    backgroundColor: '#d1d5db',
   },
 
   body: { padding: SPACING.lg },
@@ -307,7 +386,26 @@ const styles = StyleSheet.create({
   reporterName: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.textSecondary, flex: 1 },
   reporterDate: { ...TYPOGRAPHY.caption, color: COLORS.textMuted, fontWeight: '600' },
 
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.xl },
+  // Map section
+  mapSection: { marginBottom: SPACING.xl },
+  mapPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+  },
+  expandMapBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs,
+    marginTop: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
+  },
+  expandMapText: { ...TYPOGRAPHY.caption, fontWeight: '700', color: COLORS.primary },
+
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.sm, marginBottom: SPACING.xl },
   locationText: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 
   upvoteBtn: {
@@ -321,9 +419,17 @@ const styles = StyleSheet.create({
 
   sectionLabel: { ...TYPOGRAPHY.sectionLabel, color: COLORS.textMuted, marginBottom: SPACING.md },
 
-  commentInputRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md, alignItems: 'flex-end' },
+  // Sticky comment footer
+  commentFooter: {
+    backgroundColor: COLORS.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+  },
+  commentInputRow: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-end' },
   commentInput: {
-    flex: 1, backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    flex: 1, backgroundColor: COLORS.background, borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
     ...TYPOGRAPHY.body, color: COLORS.textPrimary, maxHeight: 100,

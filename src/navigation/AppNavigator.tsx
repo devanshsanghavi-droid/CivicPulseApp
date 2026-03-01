@@ -33,7 +33,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Feed: undefined;
-  Map: undefined;
+  Map: { focusIssueId?: string; latitude?: number; longitude?: number } | undefined;
   Report: undefined;
   Profile: undefined;
   Admin: undefined;
